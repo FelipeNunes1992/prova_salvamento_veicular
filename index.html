@@ -1,0 +1,1754 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Título Atualizado -->
+    <title>Avaliação de Salvamento Veicular CFSd 2025</title>
+    <!-- Carregamento do Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Configuração do Tailwind para usar a fonte Inter e cores customizadas -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#DC2626', // Vermelho forte
+                        'secondary': '#FBBF24', // Amarelo
+                        'bg-dark': '#1F2937',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        
+        /* Estilo para focar em mobile */
+        .container-main {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 1rem;
+            background-color: #F3F4F6;
+        }
+
+        .card {
+            width: 100%;
+            max-width: 800px;
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            padding: 1.5rem;
+        }
+        
+        /* Oculta as setas de número em navegadores */
+        .penalty-count-input::-webkit-outer-spin-button,
+        .penalty-count-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .penalty-count-input {
+            appearance: none;
+            -moz-appearance: textfield; 
+            border: none;
+            background-color: transparent;
+            font-size: 1.125rem;
+        }
+
+        /* Estilo para esconder o container de impressão na visualização normal */
+        #individual-scores-table-print {
+            display: none;
+        }
+
+        /* Estilos de Relatório Global */
+        .report-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            padding: 0.5rem 0;
+        }
+        .report-grid-header {
+            font-weight: 700;
+            background-color: #F3F4F6;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+        }
+        .score-good {
+            color: #10B981;
+            font-weight: 700;
+        }
+        .score-bad {
+            color: #DC2626;
+            font-weight: 700;
+        }
+        .detail-row {
+            transition: max-height 0.3s ease-out;
+            overflow: hidden;
+            max-height: 0;
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+        }
+        .detail-row.open {
+            max-height: 1000px; /* Suficientemente grande para expandir */
+            margin-bottom: 1rem !important;
+        }
+
+
+        /* Esconde elementos não essenciais durante a impressão (Salvar PDF) */
+        @media print {
+            .no-print, #list-view, .flex-col > button, .space-x-2 button, .print-hidden {
+                display: none !important;
+            }
+            .card {
+                box-shadow: none;
+                padding: 0;
+            }
+            #form-view {
+                display: block !important;
+            }
+            #penalties-summary {
+                background-color: #fff; /* Fundo branco para impressão */
+                border: 1px solid #ccc; /* Borda visível */
+            }
+            h1, h2, h3 {
+                color: black !important;
+            }
+            .print-view-only {
+                display: block !important;
+            }
+            /* A tabela de notas principal deve ser escondida, pois 'print-view-only' a substitui */
+            #individual-scores-table {
+                display: none !important; 
+            }
+            #individual-scores-table-print {
+                display: block !important; /* Mostra a tabela de impressão no PDF */
+                margin-top: 1rem;
+                padding-top: 1rem;
+                border-top: 1px solid #ccc;
+            }
+            /* Esconde o título das notas da seção principal para evitar duplicação */
+            .score-title-no-print {
+                display: none !important;
+            }
+
+            /* No relatório, forçamos a visibilidade dos detalhes */
+            #report-view .detail-row {
+                max-height: none !important;
+                overflow: visible !important;
+            }
+        }
+    </style>
+</head>
+<body class="font-sans">
+
+<div id="app" class="container-main">
+    <div class="card">
+        <!-- Título Atualizado na UI -->
+        <h1 class="text-3xl font-bold mb-6 text-center text-primary">Avaliação de Salvamento Veicular CFSd 2025</h1>
+        <!-- Mensagem de status foi alterada para refletir o armazenamento local -->
+        <p id="auth-status" class="text-sm text-gray-500 mb-4 text-center no-print">Dados salvos localmente no navegador.</p> 
+        <div id="loading-spinner" class="text-center py-12 no-print" style="display:none;">
+        </div>
+        <div id="main-content">
+            <!-- CONTEÚDO DA LISTA INICIAL (LIST-VIEW) -->
+            <div id="list-view">
+                <h2 class="2xl font-semibold mb-4 text-gray-800">Avaliações Cadastradas</h2>
+                
+                <!-- Seleção de Prova -->
+                <div class="mb-6 no-print">
+                    <label for="evaluation-type-select" class="block text-sm font-medium text-gray-700 mb-1">Selecione a Prova:</label>
+                    <select id="evaluation-type-select" onchange="renderEvaluationsList()" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary focus:ring-primary p-3 border">
+                        <option value="estabilizacao">1. Estabilização Veicular (3.0 pts)</option>
+                        <option value="retirada">2. Retirada de Vítimas (3.0 pts)</option>
+                        <option value="corte">3. Técnica de Corte (2.0 pts)</option>
+                    </select>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-3 mb-6 no-print">
+                    <button onclick="showForm()" class="flex-1 py-2 bg-primary text-white font-bold rounded-lg hover:bg-red-700 transition duration-300 shadow-md">
+                        + Nova Avaliação
+                    </button>
+                    <!-- NOVO BOTÃO: Relatório Consolidado Individual -->
+                    <button onclick="showReportView('individual')" class="flex-1 py-2 bg-yellow-600 text-white font-bold rounded-lg hover:bg-yellow-700 transition duration-300 shadow-md">
+                        Relatório por Aluno (Detalhado)
+                    </button>
+                </div>
+                
+                <div class="flex flex-col sm:flex-row gap-3 mb-6 no-print">
+                    <!-- Botão de Exportação CSV -->
+                    <button id="export-csv-btn" onclick="exportToCSV()" class="flex-1 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition duration-300 shadow-md disabled:opacity-50">
+                        Exportar Tabela (CSV)
+                    </button>
+                    <!-- NOVO BOTÃO: Relatório Consolidado Global -->
+                    <button onclick="showReportView('global')" class="flex-1 py-2 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition duration-300 shadow-md">
+                        Relatório de Notas (Geral)
+                    </button>
+                </div>
+                
+                <div id="evaluations-list" class="space-y-3">
+                    <!-- Lista de avaliações será injetada aqui -->
+                </div>
+                
+                <div id="list-empty" class="text-center py-10 text-gray-500" style="display:none;">
+                    <p>Nenhuma avaliação encontrada para esta prova. Clique em "Nova Avaliação" para começar.</p>
+                </div>
+            </div>
+
+            <!-- CONTEÚDO DO FORMULÁRIO DE EDIÇÃO (FORM-VIEW) -->
+            <div id="form-view" style="display:none;">
+                <h2 id="form-title" class="2xl font-semibold mb-4 text-gray-800">Nova Avaliação</h2>
+                <form id="evaluation-form" class="space-y-4">
+                    <input type="hidden" id="evaluation-id">
+                    <input type="hidden" id="evaluation-type"> <!-- Campo para salvar o tipo de prova -->
+
+                    <!-- Lista de Alunos com Botões (Apenas edição) -->
+                    <div class="no-print">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Alunos do Grupo/Equipe:</label>
+                        <div id="students-container" class="space-y-2 mb-3">
+                            <!-- Inputs de Alunos serão injetados aqui -->
+                        </div>
+                        <button type="button" onclick="addStudentInput()" class="w-full py-2 border border-dashed border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition duration-150">
+                            + Adicionar Aluno
+                        </button>
+                    </div>
+
+                    <!-- Campos fixos para impressão -->
+                    <div id="print-data-container" class="space-y-2 mb-4 print-view-only">
+                        <!-- Será preenchido com dados de alunos e tempo no formato de relatório -->
+                    </div>
+                    
+                    <!-- NOVO: Seletor de Sub-Tipo (Aparece apenas para Técnica de Corte) -->
+                    <div class="no-print" id="corte-subtype-container" style="display: none;">
+                        <label for="corte-subtype-select" class="block text-sm font-medium text-gray-700 mb-1">Técnica Específica:</label>
+                        <select id="corte-subtype-select" onchange="renderPenaltiesRegistration()" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary focus:ring-primary p-3 border">
+                            <option value="painel">Rebatimento de Painel</option>
+                            <option value="teto">Rebatimento Lateral de Teto</option>
+                        </select>
+                    </div>
+                    
+                    <!-- NOVO: Seletor de Cenário (Aparece apenas para Estabilização Veicular) -->
+                    <div class="no-print" id="estabilizacao-subtype-container" style="display: none;">
+                        <label for="estabilizacao-subtype-select" class="block text-sm font-medium text-gray-700 mb-1">Cenário da Estabilização:</label>
+                        <select id="estabilizacao-subtype-select" onchange="renderPenaltiesRegistration()" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary focus:ring-primary p-3 border">
+                            <option value="4rodas">Veículo Sobre 04 Rodas (1.5 pts)</option>
+                            <option value="tombado">Veículo Tombado (1.5 pts)</option>
+                        </select>
+                    </div>
+
+                    
+                    <!-- Campo de Seleção de Tempo -->
+                    <div class="no-print" id="time-selector-container">
+                        <label class="block text-sm font-medium text-gray-700 mb-1" id="time-label">Tempo de Execução (Minutos:Segundos.ms):</label>
+                        <div class="flex space-x-3 items-end">
+                            <!-- Minutos -->
+                            <div class="flex-1">
+                                <label for="time-minutes" class="text-xs text-gray-500">Minutos</label>
+                                <select id="time-minutes" onchange="calculateScores()" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary focus:ring-primary p-3 border">
+                                    <!-- Opções de 0 a 10 minutos -->
+                                </select>
+                            </div>
+                            
+                            <!-- Segundos -->
+                            <div class="flex-1">
+                                <label for="time-seconds" class="text-xs text-gray-500">Segundos</label>
+                                <select id="time-seconds" onchange="calculateScores()" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary focus:ring-primary p-3 border">
+                                    <!-- Opções de 00 a 59 segundos -->
+                                </select>
+                            </div>
+                            
+                            <!-- Milissegundos -->
+                            <div class="w-1/4">
+                                <label for="time-milliseconds" class="text-xs text-gray-500">Milissegundos</label>
+                                <input type="number" id="time-milliseconds" oninput="calculateScores()" min="0" max="999" placeholder="ms" value="000" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary focus:ring-primary p-3 border text-center">
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">Nota Base (Tempo): <span id="base-score" class="font-semibold text-blue-600">0.0</span></p>
+                    </div>
+                    <!-- FIM DO CAMPO DE TEMPO -->
+
+                    <!-- Seção de Penalidades -->
+                    <h3 class="text-xl font-semibold pt-4 text-gray-800 no-print" id="penalties-title">Registro de Penalidades (0,3 pontos por ocorrência)</h3>
+                    <p class="text-sm text-gray-600 mb-4 no-print">Selecione o aluno (ou Grupo) e clique em **Aplicar Penalidade**.</p>
+                    
+                    <div id="penalties-registration-list" class="space-y-4 p-4 border rounded-lg bg-gray-50 no-print">
+                        <!-- Lista de penalidades e botões será injetada aqui -->
+                        <p id="penalty-placeholder" class="text-gray-500 text-center">Adicione pelo menos um aluno para registrar penalidades.</p>
+                    </div>
+                    
+                    <!-- Relatório Interativo de Ocorrências -->
+                    <div id="penalties-summary" class="mt-6 p-4 bg-yellow-100 rounded-lg text-sm border border-yellow-300">
+                        <h4 class="font-semibold mb-3 text-gray-800">Relatório Interativo de Ocorrências:</h4>
+                        <p class="text-xs text-gray-600 mb-2 no-print">Clique em "Diminuir 1x" para remover uma ocorrência para o militar ou grupo específico.</p>
+                        <ul id="penalty-breakdown" class="space-y-3">
+                            <!-- Penalidades detalhadas com botões de remoção/diminuição -->
+                        </ul>
+                    </div>
+                    
+                    <!-- Visualização das Notas Individuais (Principal) -->
+                    <div class="pt-6 border-t mt-6 border-gray-200">
+                        <div class="flex justify-between items-center mb-4 p-4 bg-gray-100 rounded-lg shadow-inner print-hidden">
+                            <span class="text-lg font-bold text-gray-700">Ocorrências Totais do Grupo:</span>
+                            <span id="penalty-count" class="2xl font-extrabold text-primary">0</span>
+                        </div>
+
+                        <h3 class="text-xl font-bold mb-3 text-gray-800 score-title-no-print">NOTAS FINAIS INDIVIDUAIS</h3>
+                        <div id="individual-scores-table" class="space-y-2">
+                            <!-- Notas individuais serão injetadas aqui (Apenas uma vez) -->
+                        </div>
+                        
+                        <!-- Container da tabela de notas para impressão -->
+                        <div id="individual-scores-table-print" class="print-view-only"></div>
+
+                    </div>
+
+                    <!-- Botões de Ação -->
+                    <div class="flex flex-col sm:flex-row gap-3 mt-6 no-print">
+                        <button type="submit" class="flex-1 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition duration-300 shadow-md">
+                            Salvar Avaliação
+                        </button>
+                        <button type="button" onclick="showList()" class="flex-1 py-3 bg-gray-500 text-white font-bold rounded-lg hover:bg-gray-600 transition duration-300 shadow-md">
+                            Cancelar e Voltar
+                        </button>
+                    </div>
+                    
+                    <!-- Botão de Salvar PDF -->
+                    <button type="button" onclick="triggerPrint()" class="w-full py-3 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-600 transition duration-300 shadow-md mt-3 no-print">
+                        Imprimir / Salvar PDF
+                    </button>
+
+                    <!-- Botão de exclusão removido da página do formulário -->
+                </form>
+            </div>
+
+            <!-- CONTEÚDO DO RELATÓRIO INDIVIDUAL (REPORT-VIEW) -->
+            <div id="report-view" style="display:none;">
+                <h2 class="text-2xl font-semibold mb-4 text-gray-800" id="report-title">Relatório Consolidado por Aluno</h2>
+                
+                <div id="report-selection-container">
+                    <!-- Opções de seleção de relatório serão injetadas aqui -->
+                </div>
+                
+                <div id="student-report-output" class="space-y-4 p-4 border rounded-lg bg-white shadow-md mt-4">
+                    <p class="text-gray-500 text-center">Selecione o tipo de relatório e o aluno para gerar a visualização.</p>
+                </div>
+
+                <button onclick="showList()" class="w-full py-2 bg-gray-500 text-white font-bold rounded-lg hover:bg-gray-600 transition duration-300 shadow-md mt-6">
+                    Voltar para Lista
+                </button>
+            </div>
+            <!-- FIM DO CONTEÚDO DO RELATÓRIO -->
+
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- CONSTANTES E VARIÁVEIS GLOBAIS ---
+    const LOCAL_STORAGE_KEY = 'salvamento_avaliacoes';
+    const PENALTY_DEDUCTION = 0.3; 
+    let studentPenalties = {}; // Estrutura: { "Aluno Nome": { "penalty-id": count }, "Grupo": { "penalty-id": count } }
+    let studentCount = 0; // Contador auxiliar para IDs dinâmicos de alunos
+    let allStudentsInAllEvaluations = [];
+    
+    // Penalidades da Prova de Estabilização (Baseado no PDF)
+    const ESTABILIZACAO_PENALTIES = [
+        "Utilizar calço não previsto para a finalidade e em local não previsto na estabilização",
+        "Utilizar o conjunto de escoras de maneira incorreta segundo o manual do fabricante ou ensinado nas aulas",
+        "Colocar-se em situação insegura durante a realização da estabilização veicular",
+        "Qualquer outro procedimento errado",
+        "O calço ficar solto ou mal colocado (retirar 0,2 para cada calço)",
+    ];
+
+    // Lista de Penalidades Comuns (Retirada de Vítimas)
+    const COMMON_PENALTIES = [
+        "Não realizar corretamente a estabilização veicular",
+        "Não realizar a avaliação 360 graus no veículo (andando)",
+        "Não realizar abordagem de frente para a vítima",
+        "Não realizar os procedimentos internos (desligar o veículo, acionar o freio estacionário)",
+        "Entrar no veículo antes da estabilização (o aluno pode alcançar o freio estacionário ou outra parte do veículo do lado de fora, mas não poderá se apoiar no veículo / o aluno poderá realizar as ações de APH do lado externo também, sem que entre no veículo)",
+        "Não imobilizar a vítima de maneira correta (deixar a cervical solta, fazer movimentos inadequados com a vítima, etc.)",
+        "Realizar a retirada da vítima com técnica diversa a de 30 graus",
+        "Não colocar o O2 (o O2 poderá ser retirado no momento da extração, mas deve conectado novamente após a extração)",
+        "Não colocar o oxímetro",
+        "Não colocar o colar cervical",
+        "Não cobrir a vítima",
+        "Qualquer outro procedimento divergente ao ensinado nas aulas ou não previsto no material didático",
+    ];
+
+    // Penalidades para Técnica de Corte - Sub-tipos detalhados
+    const CORTE_SUBTYPE_PENALTIES = {
+        'painel': [
+            "01. Abertura da porta (dobradiças) – usar alargador",
+            "02. Abertura da porta (fechadura) – usar alargador",
+            "03. Corte da coluna A na parte mediana – usar cortardor",
+            "04. Corte de alívio na base da coluna A – usar cortador",
+            "05. Posicionar o apoio do extensor (0.2 pts decréscimo)",
+            "Qualquer procedimento incorreto",
+        ],
+        'teto': [
+            "01. Corte da Coluna A superior – usar cortador",
+            "02. Corte da Coluna B superior – usar cortador",
+            "03. Corte da coluna C e D superior – usar cortador",
+            "04. Corte do vidro dianteiro – usar machadinha e/ou serra sabre",
+            "05. 2 Cortes de alívio no teto perto da Coluna A e D",
+            "Qualquer procedimento incorreto",
+        ]
+    };
+
+
+    // Tabela de Notas para 1.5 pontos (Estabilização)
+    const TIME_SCORES_1_5 = [
+        { maxTime: 180, score: 1.5 },    // Até 3'00''
+        { maxTime: 189.99, score: 1.4 }, 
+        { maxTime: 199.99, score: 1.3 }, 
+        { maxTime: 209.99, score: 1.2 }, 
+        { maxTime: 219.99, score: 1.1 }, 
+        { maxTime: 229.99, score: 1.0 }, 
+        { maxTime: 239.99, score: 0.9 }, 
+        { maxTime: 249.99, score: 0.8 }, 
+        { maxTime: 259.99, score: 0.7 }, 
+        { maxTime: 269.99, score: 0.6 }, 
+        { maxTime: 279.99, score: 0.5 }, 
+        { maxTime: 289.99, score: 0.4 }, 
+        { maxTime: 299.99, score: 0.3 }, 
+        { maxTime: 309.99, score: 0.2 }, 
+        { maxTime: 319.99, score: 0.1 }, 
+        { maxTime: Infinity, score: 0.0 },
+    ];
+    
+    // Tabela de Notas para 3.0 pontos (Retirada de Vítimas)
+    const TIME_SCORES_3_0 = [
+        { maxTime: 300, score: 3.0 },
+        { maxTime: 309.99, score: 2.8 },
+        { maxTime: 319.99, score: 2.6 },
+        { maxTime: 329.99, score: 2.4 },
+        { maxTime: 339.99, score: 2.2 },
+        { maxTime: 349.99, score: 2.0 },
+        { maxTime: 359.99, score: 1.8 },
+        { maxTime: 369.99, score: 1.6 },
+        { maxTime: 379.99, score: 1.4 },
+        { maxTime: 389.99, score: 1.2 },
+        { maxTime: 399.99, score: 1.0 },
+        { maxTime: 409.99, score: 0.8 },
+        { maxTime: 419.99, score: 0.6 },
+        { maxTime: 429.99, score: 0.4 },
+        { maxTime: 439.99, score: 0.2 },
+        { maxTime: Infinity, score: 0.0 },
+    ];
+
+
+    // Configurações das Três Provas
+    const EVALUATION_CONFIGS = {
+        'estabilizacao': {
+            name: 'Prova de Estabilização Veicular',
+            short_name: 'Estabilização',
+            base_score: 1.5, // Nota base por cenário
+            penalties: ESTABILIZACAO_PENALTIES,
+            penalty_deduction: 0.2, // Decréscimo de 0.2 por penalidade
+            time_scores: TIME_SCORES_1_5,
+            is_timed_score: true,
+            is_corte: false,
+            is_estabilizacao: true
+        },
+        'retirada': {
+            name: 'Prova de Retirada de Vítimas',
+            short_name: 'Retirada Vítimas',
+            base_score: 3.0,
+            penalties: COMMON_PENALTIES,
+            penalty_deduction: 0.3,
+            time_scores: TIME_SCORES_3_0,
+            is_timed_score: true,
+            is_corte: false,
+            is_estabilizacao: false
+        },
+        'corte': {
+            name: 'Prova de Técnica de Corte',
+            short_name: 'Técnica Corte',
+            base_score: 2.0,
+            penalties: CORTE_SUBTYPE_PENALTIES, // Penalidades aninhadas
+            penalty_deduction: 0.1, // CORRIGIDO: Deducao de 0.1 pts
+            time_scores: [], 
+            is_timed_score: false,
+            is_corte: true,
+            is_estabilizacao: false
+        }
+    };
+    
+    function getCurrentEvaluationConfig(type) {
+        // CORREÇÃO: Adiciona fallback para evitar TypeError em avaliações salvas sem type
+        return EVALUATION_CONFIGS[type] || EVALUATION_CONFIGS['estabilizacao'];
+    }
+    
+    let PENALTIES = []; // Será preenchido dinamicamente
+
+    // --- FUNÇÕES DE PERSISTÊNCIA E AUXILIARES ---
+
+    function loadEvaluations() {
+        try {
+            const json = localStorage.getItem(LOCAL_STORAGE_KEY);
+            const evaluations = json ? JSON.parse(json) : [];
+            
+            // Recria a lista de todos os alunos vistos (para o CSV e Relatório)
+            const uniqueStudents = new Set(evaluations.flatMap(e => e.studentNames || []));
+            allStudentsInAllEvaluations = Array.from(uniqueStudents).sort();
+
+            return evaluations;
+        } catch (e) {
+            console.error("Erro ao carregar dados do localStorage:", e);
+            return [];
+        }
+    }
+
+    function saveEvaluations(evaluations) {
+        try {
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(evaluations));
+        } catch (e) {
+            console.error("Erro ao salvar dados no localStorage. O armazenamento pode estar cheio.", e);
+            alert("Erro ao salvar dados localmente. O armazenamento pode estar cheio.");
+        }
+    }
+
+    function generateId() {
+        return Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
+    }
+    
+    // Converte tempo dos dropdowns e input de milissegundos para total de segundos (number)
+    function timeToSeconds() {
+        const minutesEl = document.getElementById('time-minutes');
+        const secondsEl = document.getElementById('time-seconds');
+        const millisecondsEl = document.getElementById('time-milliseconds');
+        
+        const minutes = parseInt(minutesEl.value, 10) || 0;
+        const seconds = parseInt(secondsEl.value, 10) || 0;
+        const milliseconds = parseInt(millisecondsEl.value.padEnd(3, '0'), 10) || 0;
+
+        return (minutes * 60) + seconds + (milliseconds / 1000);
+    }
+    
+    // Converte objeto de tempo (m, s, ms) em string MM:SS.ms (para salvar)
+    function timeObjectToString(timeObj) {
+        if (!timeObj || typeof timeObj.minutes === 'undefined') return '00:00.000';
+        
+        const m = String(timeObj.minutes).padStart(2, '0');
+        const s = String(timeObj.seconds).padStart(2, '0');
+        const ms = String(timeObj.milliseconds).padStart(3, '0');
+        return `${m}:${s}.${ms}`;
+    }
+
+    // Converte string MM:SS.ms (do load) em objeto de tempo
+    function timeStringToObjects(timeStr) {
+        if (!timeStr || timeStr.indexOf(':') === -1) return { minutes: 0, seconds: 0, milliseconds: 0 };
+        
+        // Padrão: MM:SS.ms
+        const parts = timeStr.match(/^(\d{1,2}):(\d{2})\.(\d{1,3})$/);
+        if (!parts) return { minutes: 0, seconds: 0, milliseconds: 0 };
+
+        return {
+            minutes: parseInt(parts[1], 10),
+            seconds: parseInt(parts[2], 10),
+            milliseconds: parseInt(parts[3].padEnd(3, '0'), 10)
+        };
+    }
+
+    function getTimeBaseScore(seconds) {
+        const config = getCurrentEvaluationConfig(document.getElementById('evaluation-type').value);
+        if (!config.is_timed_score) return config.base_score;
+
+        if (seconds === 0) return 0.0;
+        
+        // Verifica o tempo máximo, 320s é 5:20
+        if (seconds > 320 && config.base_score === 1.5) return 0.0; 
+
+        // Usa a tabela de tempo correta
+        const item = config.time_scores.find(t => seconds <= t.maxTime);
+        return item ? item.score : 0.0;
+    }
+
+    function cleanForCSV(value) {
+        if (typeof value === 'number') {
+            return String(value).replace(',', '.'); 
+        }
+        if (typeof value !== 'string') {
+            value = String(value);
+        }
+        if (value.includes(';') || value.includes('\n') || value.includes('"')) {
+            return '"' + value.replace(/"/g, '""') + '"';
+        }
+        return value;
+    }
+
+    // --- FUNÇÕES DE ENTRADA DE ALUNOS ---
+    
+    function generateStudentInputHtml(studentName = '', index) {
+        const studentId = `student-${index}`;
+        return `
+            <div id="${studentId}" class="flex space-x-2">
+                <input type="text" name="student_name" value="${studentName}" required placeholder="Nome Completo do Aluno"
+                       oninput="handleStudentNameChange('${studentId}')"
+                       class="flex-1 p-2 border border-gray-300 rounded-lg shadow-sm focus:border-primary focus:ring-primary student-name-input" data-original-name="${studentName}">
+                <button type="button" onclick="removeStudentInput('${studentId}')" 
+                        class="bg-red-500 text-white w-8 h-8 rounded-lg flex items-center justify-center font-bold hover:bg-red-600 transition duration-150 text-xl">
+                    &times;
+                </button>
+            </div>
+        `;
+    }
+
+    window.addStudentInput = function(studentName = '') {
+        const container = document.getElementById('students-container');
+        studentCount++;
+        container.insertAdjacentHTML('beforeend', generateStudentInputHtml(studentName, studentCount));
+        renderPenaltiesRegistration(); 
+    }
+
+    window.removeStudentInput = function(studentId) {
+        const inputToRemove = document.getElementById(studentId);
+        if (inputToRemove) {
+            const nameInput = inputToRemove.querySelector('.student-name-input');
+            const originalName = nameInput.dataset.originalName || nameInput.value.trim();
+
+            inputToRemove.remove();
+            
+            if (studentPenalties[originalName]) {
+                delete studentPenalties[originalName];
+                console.log(`Penalidades de ${originalName} removidas.`);
+                calculateScores();
+            }
+            renderPenaltiesRegistration();
+        }
+    }
+    
+    window.handleStudentNameChange = function(studentId) {
+        const input = document.getElementById(studentId).querySelector('.student-name-input');
+        const oldName = input.dataset.originalName;
+        const newName = input.value.trim();
+
+        if (oldName !== newName) {
+            if (oldName && studentPenalties[oldName]) {
+                studentPenalties[newName] = studentPenalties[oldName];
+                delete studentPenalties[oldName];
+            }
+            // Garante que o atributo data-original-name é atualizado (chave para o studentPenalties)
+            input.dataset.originalName = newName;
+        }
+        renderPenaltiesRegistration();
+        calculateScores(); 
+    }
+
+    function getStudentNamesFromForm() {
+        const inputs = document.querySelectorAll('#students-container .student-name-input');
+        return Array.from(inputs)
+                    .map(input => input.value.trim())
+                    .filter(name => name.length > 0);
+    }
+
+    // Popula os dropdowns de tempo
+    function populateTimeSelectors() {
+        const minutesEl = document.getElementById('time-minutes');
+        const secondsEl = document.getElementById('time-seconds');
+        
+        minutesEl.innerHTML = '';
+        secondsEl.innerHTML = '';
+
+        for (let m = 0; m <= 10; m++) { // De 0 a 10 minutos
+            minutesEl.insertAdjacentHTML('beforeend', `<option value="${m}">${String(m).padStart(2, '0')}</option>`);
+        }
+        
+        for (let s = 0; s < 60; s++) { // De 00 a 59 segundos
+            secondsEl.insertAdjacentHTML('beforeend', `<option value="${s}">${String(s).padStart(2, '0')}</option>`);
+        }
+    }
+
+    function renderStudentInputs(namesArray) {
+        const container = document.getElementById('students-container');
+        container.innerHTML = '';
+        studentCount = 0; 
+        
+        if (namesArray && namesArray.length > 0) {
+            namesArray.forEach((name, index) => {
+                container.insertAdjacentHTML('beforeend', generateStudentInputHtml(name, index));
+            });
+            studentCount = namesArray.length;
+        } else {
+            addStudentInput();
+        }
+        
+        // Atualiza a visualização dos dados para impressão/PDF
+        updatePrintData();
+    }
+    
+    // Renderiza dados de alunos, tempo e notas para a visualização de impressão/PDF
+    function updatePrintData() {
+        const container = document.getElementById('print-data-container');
+        const studentNames = getStudentNamesFromForm();
+        
+        const timeStr = timeObjectToString({
+            minutes: parseInt(document.getElementById('time-minutes')?.value || 0),
+            seconds: parseInt(document.getElementById('time-seconds')?.value || 0),
+            milliseconds: parseInt(document.getElementById('time-milliseconds')?.value || 0)
+        });
+
+        const baseScore = document.getElementById('base-score').textContent;
+        const totalOccurrences = document.getElementById('penalty-count').textContent;
+        const currentConfig = getCurrentEvaluationConfig(document.getElementById('evaluation-type').value);
+        const subtype = document.getElementById('corte-subtype-select')?.value || 'N/A';
+        const estabilizacaoSubtype = document.getElementById('estabilizacao-subtype-select')?.value || 'N/A';
+        
+        // Determina o Cenário/Técnica para impressão
+        let scenarioDetail = '';
+        if (currentConfig.is_corte) {
+             scenarioDetail = `<p class="text-sm font-medium"><strong>Técnica:</strong> ${subtype === 'painel' ? 'Rebatimento de Painel' : 'Rebatimento Lateral de Teto'}</p>`;
+        } else if (currentConfig.is_estabilizacao) {
+             scenarioDetail = `<p class="text-sm font-medium"><strong>Cenário:</strong> ${estabilizacaoSubtype === '4rodas' ? 'Sobre 04 Rodas' : 'Tombado'}</p>`;
+        }
+
+        container.innerHTML = `
+            <h3 class="text-xl font-bold mb-2 text-gray-800">Dados da Avaliação</h3>
+            <p class="text-sm font-medium"><strong>Prova:</strong> ${currentConfig.name}</p>
+            ${scenarioDetail}
+            <p class="text-sm font-medium"><strong>Data da Aplicação:</strong> ${new Date().toLocaleDateString('pt-BR')}</p>
+            <p class="text-sm font-medium"><strong>Tempo de Execução:</strong> ${timeStr}</p>
+            <p class="text-sm font-medium"><strong>Nota Base (Total):</strong> ${baseScore} pts</p>
+            <p class="text-sm font-medium"><strong>Alunos Avaliados:</strong> ${studentNames.join(', ') || 'Nenhum'}</p>
+            <p class="text-sm font-medium"><strong>Ocorrências Totais:</strong> ${totalOccurrences}</p>
+        `;
+
+        // NOVO: Adicionar a tabela de notas individuais à área de impressão
+        const scoreTablePrintEl = document.getElementById('individual-scores-table-print');
+        const currentScoreTable = document.getElementById('individual-scores-table').innerHTML;
+        
+        scoreTablePrintEl.innerHTML = `
+            <h3 class="text-xl font-bold mb-3 text-gray-800 print-view-only">NOTAS FINAIS INDIVIDUAIS</h3>
+            <div class="space-y-2">
+                ${currentScoreTable}
+            </div>
+        `;
+    }
+
+    // --- FUNÇÕES DE PENALIDADES E PONTUAÇÃO ---
+
+    window.applyPenalty = function(penaltyId) {
+        const select = document.getElementById(`select-${penaltyId}`);
+        const responsibleName = select.value;
+        
+        if (!responsibleName) {
+            alert('Selecione um aluno ou o Grupo antes de aplicar a penalidade.');
+            return;
+        }
+        
+        if (!studentPenalties[responsibleName]) {
+            studentPenalties[responsibleName] = {};
+        }
+
+        studentPenalties[responsibleName][penaltyId] = (studentPenalties[responsibleName][penaltyId] || 0) + 1;
+        
+        console.log(`Penalidade ${penaltyId} aplicada a ${responsibleName}.`);
+
+        calculateScores();
+        renderPenaltiesRegistration();
+    }
+    
+    window.removePenalty = function(responsibleName, penaltyId) {
+        const safeName = responsibleName.replace(/\\'/g, "'"); 
+
+        if (studentPenalties[safeName] && studentPenalties[safeName][penaltyId] > 0) {
+            studentPenalties[safeName][penaltyId]--;
+            if (studentPenalties[safeName][penaltyId] === 0) {
+                delete studentPenalties[safeName][penaltyId];
+            }
+            if (Object.keys(studentPenalties[safeName]).length === 0) {
+                delete studentPenalties[safeName];
+            }
+            calculateScores();
+            renderPenaltiesRegistration();
+        }
+    }
+    
+    function renderPenaltyBreakdown() {
+        const breakdownEl = document.getElementById('penalty-breakdown');
+        const summaryCard = document.getElementById('penalties-summary');
+        breakdownEl.innerHTML = '';
+
+        const namesWithPenalties = Object.keys(studentPenalties);
+
+        if (namesWithPenalties.length === 0) {
+            summaryCard.style.display = 'none';
+            return;
+        }
+        
+        summaryCard.style.display = 'block';
+
+        namesWithPenalties.forEach(name => {
+            const penalties = studentPenalties[name];
+            const safeNameForHtml = name.replace(/'/g, "\\'"); 
+            
+            let listHtml = `<li class="border-b border-yellow-400 pb-2 mt-2"><strong>${name}:</strong></li><ul class="ml-4 list-disc space-y-1 pt-1">`;
+            
+            Object.keys(penalties).forEach(pId => { // pId é penaltyId
+                const count = penalties[pId];
+                
+                // CORRIGIDO: pId já está no escopo, garantido no loop de Object.keys(penalties)
+                const penaltyName = PENALTIES.find(p => p.id === pId)?.name || 'Penalidade Desconhecida';
+                
+                listHtml += `
+                    <li class="flex justify-between items-center pr-4">
+                        <span class="text-xs w-2/3">${penaltyName} <strong class="text-primary">(${count}x)</strong></span>
+                        <button type="button" onclick="removePenalty('${safeNameForHtml}', '${pId}')"
+                                class="w-auto px-2 py-1 bg-red-500 text-white rounded-md text-xs font-semibold hover:bg-red-600 transition duration-150 no-print">
+                            Diminuir 1x
+                        </button>
+                    </li>
+                `;
+            });
+            listHtml += `</ul>`;
+            breakdownEl.insertAdjacentHTML('beforeend', listHtml);
+        });
+    }
+
+    window.renderPenaltiesRegistration = function() {
+        const container = document.getElementById('penalties-registration-list');
+        const studentNames = getStudentNamesFromForm();
+
+        // Obtém o tipo de prova atual
+        const evaluationType = document.getElementById('evaluation-type').value;
+        const config = getCurrentEvaluationConfig(evaluationType);
+        
+        let penaltyListSource = config.penalties;
+        
+        // Se for Corte, obtém a lista do sub-tipo
+        if (config.is_corte) {
+            const subtype = document.getElementById('corte-subtype-select').value || 'painel';
+            penaltyListSource = config.penalties[subtype];
+            
+            // Exibe o seletor de sub-tipo
+            document.getElementById('corte-subtype-container').style.display = 'block';
+            document.getElementById('estabilizacao-subtype-container').style.display = 'none';
+        } 
+        // NOVO: Se for Estabilização, esconde Corte e mostra o seletor de Cenário
+        else if (config.is_estabilizacao) {
+            document.getElementById('corte-subtype-container').style.display = 'none';
+            document.getElementById('estabilizacao-subtype-container').style.display = 'block';
+        }
+        else {
+             // Esconde ambos os seletores de sub-tipo
+            document.getElementById('corte-subtype-container').style.display = 'none';
+            document.getElementById('estabilizacao-subtype-container').style.display = 'none';
+        }
+
+        // Atualiza a lista de penalidades globais antes de renderizar
+        // Se for Corte, mapeamos os nomes diretamente; se não, mapeamos o array
+        PENALTIES = Array.isArray(penaltyListSource) ?
+            penaltyListSource.map((name, index) => ({ id: `penalty-${index}`, name })) :
+            // Se for objeto aninhado, pegamos o array do subtipo (usando o valor atual do seletor)
+            penaltyListSource[document.getElementById('corte-subtype-select').value || 'painel'].map((name, index) => ({ id: `penalty-${index}`, name }));
+        
+        // Atualiza a descrição da dedução na UI
+        const penaltyTitleEl = document.getElementById('penalties-title');
+        const deductionText = config.is_timed_score ? 
+            `${config.penalty_deduction} pontos por ocorrência` : 
+            `Deduz ${config.penalty_deduction} pts por item não realizado`;
+        penaltyTitleEl.textContent = `Registro de Penalidades (${deductionText})`;
+
+
+        if (studentNames.length === 0) {
+            container.innerHTML = `<p id="penalty-placeholder" class="text-gray-500 text-center">Adicione pelo menos um aluno para registrar penalidades.</p>`;
+            document.getElementById('penalties-summary').style.display = 'none';
+            return;
+        }
+
+        container.innerHTML = PENALTIES.map(penalty => {
+            // Opções para o dropdown (inclui o grupo)
+            const options = [
+                '<option value="">--- Selecionar Aluno ---</option>',
+                `<option value="Grupo" class="font-bold">GRUPO/EQUIPE</option>`,
+                ...studentNames.map(name => `<option value="${name}">${name}</option>`)
+            ].join('');
+
+            return `
+                <div class="border-b pb-3 mb-3 last:border-b-0 last:pb-0">
+                    <p class="font-medium text-gray-700 mb-2 text-sm">${penalty.name}</p>
+                    <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 items-center">
+                        <select id="select-${penalty.id}" class="flex-1 p-2 border border-gray-300 rounded-lg text-sm">
+                            ${options}
+                        </select>
+                        <button type="button" onclick="applyPenalty('${penalty.id}')"
+                                class="w-full sm:w-auto px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition duration-150">
+                            Aplicar Penalidade (+)
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        renderPenaltyBreakdown();
+        calculateScores();
+    }
+    
+    // Calcula as notas e retorna o objeto de scores para o salvamento
+    window.calculateScores = function() {
+        const evaluationType = document.getElementById('evaluation-type').value;
+        const currentConfig = getCurrentEvaluationConfig(evaluationType);
+        let baseScore = currentConfig.base_score;
+        
+        // Se for prova baseada em tempo, calcula a nota base
+        if (currentConfig.is_timed_score) {
+            const seconds = timeToSeconds(); // Lê o tempo dos seletores
+            baseScore = getTimeBaseScore(seconds);
+            document.getElementById('time-label').textContent = 'Tempo de Execução (Minutos:Segundos.ms):';
+            document.getElementById('time-selector-container').classList.remove('hidden');
+            
+        } else {
+             // Se for prova de Corte (fixa em 2.0 ou outra base)
+            document.getElementById('time-label').textContent = 'Tempo de Execução (Apenas Registro):';
+            // Oculta seletor de tempo na prova de corte
+            document.getElementById('time-selector-container').classList.add('hidden');
+        }
+
+        // --- 1. Calcular Penalidades Totais (para o contador principal) ---
+        let totalPenaltyCount = 0;
+        Object.values(studentPenalties).forEach(penaltiesByType => {
+            Object.values(penaltiesByType).forEach(count => {
+                totalPenaltyCount += count;
+            });
+        });
+
+        document.getElementById('base-score').textContent = baseScore.toFixed(1);
+        document.getElementById('penalty-count').textContent = totalPenaltyCount;
+
+        // --- 2. Calcular Notas Individuais ---
+        const studentNames = getStudentNamesFromForm();
+        const individualScores = {};
+
+        // Variável para construir o HTML das notas
+        let scoresTableHtml = ''; 
+        const groupPenaltiesByType = studentPenalties["Grupo"] || {};
+        
+        studentNames.forEach(name => {
+            const individualPenaltiesByType = studentPenalties[name] || {};
+            let studentTotalPenaltyCount = 0;
+
+            // a) Penalidades de Grupo (afeta todos)
+            Object.values(groupPenaltiesByType).forEach(count => {
+                studentTotalPenaltyCount += count;
+            });
+
+            // b) Penalidades Individuais (afeta apenas o aluno)
+            Object.values(individualPenaltiesByType).forEach(count => {
+                studentTotalPenaltyCount += count;
+            });
+            
+            // Decréscimo dinâmico
+            const penaltyDeduction = studentTotalPenaltyCount * currentConfig.penalty_deduction;
+            
+            let finalScore = baseScore - penaltyDeduction;
+            if (finalScore < 0) finalScore = 0.0;
+            
+            individualScores[name] = {
+                finalScore: parseFloat(finalScore.toFixed(1)),
+                penaltyCount: studentTotalPenaltyCount
+            };
+
+            // Constrói o HTML para a linha da tabela de notas
+            const scoreClass = finalScore >= (currentConfig.base_score * 0.7) ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'; // Usa 70% da nota base como referência de cor
+            
+            scoresTableHtml += `
+                <div class="flex justify-between items-center p-3 rounded-lg border ${scoreClass}">
+                    <span class="font-medium w-3/5">${name}</span>
+                    <span class="text-sm w-1/5 text-right">Penalidades: ${studentTotalPenaltyCount}</span>
+                    <span class="text-xl font-extrabold w-1/5 text-right">${finalScore.toFixed(1)}</span>
+                </div>
+            `;
+        });
+
+        // CORRIGIDO: Atualiza o DOM UMA ÚNICA VEZ
+        document.getElementById('individual-scores-table').innerHTML = scoresTableHtml;
+
+        renderPenaltyBreakdown();
+        updatePrintData(); // Atualiza dados para impressão
+        
+        // Cria a string de tempo formatada para salvar
+        const timeStr = timeObjectToString({
+            minutes: parseInt(document.getElementById('time-minutes').value, 10),
+            seconds: parseInt(document.getElementById('time-seconds').value, 10),
+            milliseconds: parseInt(document.getElementById('time-milliseconds').value.padEnd(3, '0'), 10)
+        });
+        
+        return { individualScores, totalPenaltyCount, timeStr };
+    }
+    
+    // ATUALIZADO: Renderiza a lista (Mostra prova, alunos e faixa de notas)
+    window.renderEvaluationsList = function() {
+        const selectEl = document.getElementById('evaluation-type-select');
+        const currentType = selectEl.value;
+        const currentConfig = getCurrentEvaluationConfig(currentType);
+        
+        // CORREÇÃO: Inicializa PENALTIES com um array vazio se for um objeto aninhado, evitando o erro .map is not a function
+        PENALTIES = Array.isArray(currentConfig.penalties) ? currentConfig.penalties.map((name, index) => ({ id: `penalty-${index}`, name })) : [];
+        
+        // CORREÇÃO: Filtra pela prova selecionada e usa 'estabilizacao' como fallback para dados antigos
+        const evaluations = loadEvaluations().filter(e => (e.type || 'estabilizacao') === currentType); 
+
+        const listEl = document.getElementById('evaluations-list');
+        const emptyEl = document.getElementById('list-empty');
+        const exportBtn = document.getElementById('export-csv-btn');
+        // const exportJsonBtn = document.getElementById('export-json-btn'); // Removido
+        listEl.innerHTML = '';
+
+        if (evaluations.length === 0) {
+            emptyEl.style.display = 'block';
+            if (exportBtn) exportBtn.disabled = true;
+            return;
+        }
+
+        emptyEl.style.display = 'none';
+        if (exportBtn) exportBtn.disabled = false;
+        
+        evaluations.sort((a, b) => (a.studentNames[0] || "").localeCompare(b.studentNames[0] || ""));
+
+        evaluations.forEach(evaluation => {
+            const studentNames = evaluation.studentNames || [];
+            const mainName = studentNames.length > 0 ? studentNames[0] : "Grupo Não Identificado"; 
+            
+            const scores = evaluation.individualScores || {};
+            const scoreValues = Object.values(scores).map(s => s.finalScore).filter(s => typeof s === 'number');
+            
+            let scoreDisplay = 'N/A';
+            let scoreColor = 'text-gray-500';
+            
+            // Determina a configuração base da avaliação salva
+            const savedConfig = EVALUATION_CONFIGS[evaluation.type || 'estabilizacao'];
+            const base = savedConfig?.base_score || 3.0;
+
+            if (scoreValues.length > 0) {
+                const minScore = Math.min(...scoreValues).toFixed(1);
+                const maxScore = Math.max(...scoreValues).toFixed(1);
+                
+                if (minScore === maxScore) {
+                    scoreDisplay = minScore;
+                } else {
+                    scoreDisplay = `${minScore} - ${maxScore}`; // Faixa de notas
+                }
+                
+                scoreColor = maxScore >= (base * 0.7) ? 'text-green-600' : 'text-red-500';
+            }
+
+            const penaltyCount = Object.values(evaluation.penalties || {})
+                                        .flatMap(p => Object.values(p)) 
+                                        .reduce((sum, count) => sum + (typeof count === 'number' ? count : 0), 0);
+            
+            const evalForForm = { ...evaluation };
+            const evaluationJson = JSON.stringify(evalForForm).replace(/'/g, '&#39;');
+            
+            const studentListHtml = studentNames.length > 1 ? ` (+${studentNames.length - 1})` : '';
+            
+            // Determina o sub-título da prova (Cenário de Estabilização ou Técnica de Corte)
+            let subtitle = savedConfig.short_name;
+            if (savedConfig.is_estabilizacao && evaluation.subtype) {
+                // CORRIGIDO: Usa o subtipo da estabilização
+                subtitle = evaluation.subtype === '4rodas' ? 'Est. 4 Rodas' : 'Est. Tombado';
+            } else if (savedConfig.is_corte && evaluation.subtype) {
+                subtitle = evaluation.subtype === 'painel' ? 'Corte Painel' : 'Corte Teto';
+            }
+
+
+            // Cria a string de nomes para o botão de resumo rápido
+            const summaryData = {
+                Prova: savedConfig.name,
+                Subtipo: subtitle,
+                Tempo: evaluation.time || 'N/A',
+                Ocorrencias_Totais: penaltyCount,
+                Notas: scoreDisplay,
+                Alunos: studentNames.join('\n')
+            };
+            
+            // Prepara a string para o alert (escapando aspas e quebras de linha)
+            const formattedSummary = JSON.stringify(
+                `PROVA: ${summaryData.Prova}\nCENÁRIO: ${summaryData.Subtipo}\nTEMPO: ${summaryData.Tempo}\nOCORRÊNCIAS TOTAIS: ${summaryData.Ocorrencias_Totais}\nNOTAS: ${summaryData.Notas}\n\nALUNOS:\n${summaryData.Alunos}`
+            );
+
+
+            const cardHtml = `
+                <div class="p-4 border border-gray-200 rounded-lg shadow-sm bg-white flex justify-between items-center hover:bg-gray-50 transition duration-150">
+                    <div class="w-2/3">
+                        <p class="text-sm font-medium text-gray-500">Prova ${subtitle}</p>
+                        <p class="text-lg font-semibold text-gray-900">${mainName}${studentListHtml}</p>
+                        <p class="text-xs text-gray-500">Tempo: ${evaluation.time || 'N/A'} | Ocorrências: ${penaltyCount}</p>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-xl font-extrabold ${scoreColor} text-right">${scoreDisplay}</span>
+                        
+                        <!-- Botão de Visualização Rápida -->
+                        <button onclick='alert(${formattedSummary})' class="p-2 bg-gray-200 text-gray-800 rounded-full hover:bg-gray-300 transition duration-150">
+                            <!-- Ícone de Olho -->
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                        </button>
+                        
+                        <!-- Botão de Edição -->
+                        <button onclick='window.showForm(${evaluationJson})' class="p-2 bg-secondary text-gray-800 rounded-full hover:bg-yellow-400 transition duration-150">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-7-1.414l6.364-6.364a2 2 0 112.828 2.828L13.828 15H11v-2.828z"></path></svg>
+                        </button>
+
+                        <!-- Botão de Exclusão na Lista -->
+                        <button onclick='deleteEvaluationInList("${evaluation.id}")' class="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition duration-150">
+                            <!-- Ícone de Lixeira -->
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    </div>
+                </div>
+            `;
+            listEl.insertAdjacentHTML('beforeend', cardHtml);
+        });
+    }
+    
+    // Função para Excluir chamada diretamente da lista
+    window.deleteEvaluationInList = function(id) {
+        const confirmation = prompt(`ATENÇÃO: Para excluir a avaliação ${id} permanentemente, digite 'EXCLUIR' (em maiúsculas) no campo abaixo:`);
+
+        if (confirmation === 'EXCLUIR') {
+            try {
+                let evaluations = loadEvaluations();
+                const initialLength = evaluations.length;
+                
+                evaluations = evaluations.filter(e => e.id !== id);
+
+                if (evaluations.length < initialLength) {
+                    saveEvaluations(evaluations);
+                    console.log("Avaliação excluída com sucesso.");
+                    alert("Avaliação excluída com sucesso.");
+                    renderEvaluationsList();
+                } else {
+                    console.error("Erro ao excluir. Avaliação não encontrada na lista.");
+                    alert("Erro ao excluir. Avaliação não encontrada.");
+                }
+            } catch (error) {
+                console.error("Erro durante a exclusão da avaliação:", error);
+                alert("Ocorreu um erro inesperado ao tentar excluir a avaliação.");
+            }
+        } else if (confirmation !== null) {
+            alert("Exclusão cancelada ou código incorreto.");
+        }
+    }
+
+
+    // Exportação CSV (INALTERADO)
+    window.exportToCSV = function() {
+        const evaluations = loadEvaluations();
+        if (evaluations.length === 0) {
+            console.error("Erro de exportação: Nenhuma avaliação encontrada para exportar.");
+            alert("Nenhuma avaliação encontrada para exportar.");
+            return;
+        }
+
+        const allStudentNames = Array.from(new Set(evaluations.flatMap(e => e.studentNames || []))).sort();
+        let csvContent = "Nome Principal;Nomes dos Alunos;Tempo (MM:SS.ms);Nota Base (Tempo);Ocorrências Totais;Prova;";
+        
+        allStudentNames.forEach(studentName => {
+            csvContent += cleanForCSV(`NOTA FINAL - ${studentName}`) + ";";
+        });
+
+        // Junta as penalidades de todas as provas para a estrutura do CSV (opção mais robusta)
+        const allPenaltyNames = Array.from(new Set(Object.values(EVALUATION_CONFIGS).flatMap(c => {
+             // Lida com estruturas aninhadas (corte) e planas (estabilizacao/retirada)
+             let penalties = c.penalties;
+             if (c.is_corte) {
+                 penalties = Object.values(c.penalties).flatMap(arr => arr);
+             }
+             return penalties.map((name, index) => ({ id: `penalty-${index}`, name}));
+        }).map(p => p.name))).map((name, index) => ({ id: `penalty-${index}`, name }));
+
+        allPenaltyNames.forEach(penalty => {
+            const header = penalty.name.replace(/^(Não realizar|Não colocar|Qualquer outro procedimento)/, '').trim();
+            csvContent += cleanForCSV(`${header} (Contagem Total)`) + ";";
+        });
+        csvContent = csvContent.slice(0, -1) + "\n"; 
+
+        evaluations.forEach(evaluation => {
+            const studentNamesCleaned = evaluation.studentNames.map(cleanForCSV).join(', ');
+            const mainName = evaluation.studentNames.length > 0 ? evaluation.studentNames[0] : "";
+            
+            const timeObj = timeStringToObjects(evaluation.time);
+            const timeInSeconds = (timeObj.minutes * 60) + timeObj.seconds + (timeObj.milliseconds / 1000);
+            const baseScore = getTimeBaseScore(timeInSeconds);
+            
+            const totalPenaltiesByType = {};
+            let totalPenaltyCount = 0;
+
+            Object.values(evaluation.penalties || {}).forEach(penaltiesByStudent => {
+                 Object.keys(penaltiesByStudent).forEach(penaltyId => {
+                    const count = penaltiesByStudent[penaltyId] || 0;
+                    totalPenaltiesByType[penaltyId] = (totalPenaltiesByType[penaltyId] || 0) + count;
+                    totalPenaltyCount += count;
+                });
+            });
+
+            let row = cleanForCSV(mainName) + ";";
+            row += cleanForCSV(studentNamesCleaned) + ";";
+            row += cleanForCSV(evaluation.time) + ";";
+            row += cleanForCSV(baseScore.toFixed(1)) + ";"; 
+            row += cleanForCSV(totalPenaltyCount) + ";"; 
+            row += cleanForCSV(EVALUATION_CONFIGS[evaluation.type || 'estabilizacao']?.name) + ";"; // Nome da Prova com fallback
+
+            allStudentNames.forEach(studentName => {
+                const individualScore = evaluation.individualScores ? evaluation.individualScores[studentName]?.finalScore : '';
+                row += cleanForCSV(individualScore) + ";";
+            });
+
+            allPenaltyNames.forEach(penalty => {
+                const count = totalPenaltiesByType[penalty.id] || 0;
+                row += cleanForCSV(count) + ";";
+            });
+
+            csvContent += row.slice(0, -1) + "\n"; 
+        });
+
+        const finalCsvContent = "\ufeff" + csvContent; 
+        const encodedUri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(finalCsvContent);
+
+        const link = document.createElement('a');
+        link.setAttribute('href', encodedUri);
+        
+        const date = new Date().toISOString().slice(0, 10);
+        link.setAttribute('download', `relatorio_salvamento_${date}.csv`);
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        console.log("Exportação para CSV concluída com sucesso.");
+    }
+
+    // Exportação JSON (Detalhamento dos dados - REMOVIDO DA UI)
+    window.exportToJSON = function() {
+        const evaluations = loadEvaluations();
+        if (evaluations.length === 0) {
+            alert("Nenhuma avaliação encontrada para exportar.");
+            return;
+        }
+
+        const jsonContent = JSON.stringify(evaluations, null, 2); 
+        const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        
+        const date = new Date().toISOString().slice(0, 10);
+        link.setAttribute('download', `dados_salvamento_${date}.json`);
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        console.log("Exportação para JSON concluída com sucesso.");
+    }
+    
+    // Função que dispara a impressão (INALTERADO)
+    window.triggerPrint = function() {
+        window.print();
+    }
+    
+    // NOVO: Exibe a tela de relatório (para seleção de aluno)
+    window.showReportView = function(reportType) {
+        document.getElementById('form-view').style.display = 'none';
+        document.getElementById('list-view').style.display = 'none';
+        document.getElementById('report-view').style.display = 'block';
+
+        const reportTitleEl = document.getElementById('report-title');
+        const selectionContainer = document.getElementById('report-selection-container');
+        const outputEl = document.getElementById('student-report-output');
+        
+        outputEl.innerHTML = '<p class="text-gray-500 text-center">Selecione o tipo de relatório e o aluno para gerar a visualização.</p>';
+
+
+        if (reportType === 'individual') {
+            reportTitleEl.textContent = 'Relatório Consolidado por Aluno';
+            
+            let html = `<div class="mb-6">
+                <label for="report-student-select" class="block text-sm font-medium text-gray-700 mb-1">Selecione o Aluno:</label>
+                <select id="report-student-select" onchange="generateStudentReport()" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary focus:ring-primary p-3 border">
+                    <option value="">--- Selecione um aluno ---</option>
+                </select>
+            </div>
+            <button onclick="triggerReportPrint('individual')" class="w-full py-2 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-600 transition duration-300 mb-4">
+                Imprimir Histórico do Aluno
+            </button>
+            `;
+            selectionContainer.innerHTML = html;
+
+            const selectEl = document.getElementById('report-student-select');
+            allStudentsInAllEvaluations.forEach(name => {
+                selectEl.insertAdjacentHTML('beforeend', `<option value="${name}">${name}</option>`);
+            });
+
+        } else if (reportType === 'global') {
+            reportTitleEl.textContent = 'Relatório de Notas Finais (Geral)';
+            
+            // Adiciona o botão de geração para o relatório global
+            selectionContainer.innerHTML = `
+                <button onclick="generateGlobalReport()" class="w-full py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition duration-300 mb-4">
+                    Gerar Tabela de Notas Finais
+                </button>
+                <button onclick="triggerReportPrint('global')" class="w-full py-2 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-600 transition duration-300">
+                    Imprimir Relatório
+                </button>
+            `;
+            
+            outputEl.innerHTML = '<p class="text-gray-500 text-center">Clique no botão acima para gerar o somatório das notas de todos os alunos.</p>';
+        }
+    }
+
+    // NOVO: Função para disparar a impressão de relatórios (Global ou Individual)
+    window.triggerReportPrint = function(reportType) {
+        // Se for relatório individual, garante que o relatório está gerado antes de imprimir
+        if (reportType === 'individual' && document.getElementById('report-student-select').value) {
+            generateStudentReport();
+        } else if (reportType === 'global') {
+             generateGlobalReport(); // Garante que o relatório global está visível e populado
+        }
+
+        // Adiciona classe de impressão ao corpo para que o @media print funcione na tela de relatório
+        document.body.classList.add('printing-report'); 
+        window.print();
+        document.body.classList.remove('printing-report');
+    }
+    
+    // NOVO: Gera o relatório global (Somatório de notas para todos os alunos)
+    window.generateGlobalReport = function() {
+        const allEvaluations = loadEvaluations();
+        const outputEl = document.getElementById('student-report-output');
+        const globalScores = {}; // { AlunoNome: { totalScore, evaluations[] } }
+
+        if (allStudentsInAllEvaluations.length === 0) {
+            outputEl.innerHTML = '<p class="text-gray-500 text-center">Nenhum aluno encontrado nas avaliações salvas.</p>';
+            return;
+        }
+
+        // 1. Calcular o somatório das notas por aluno
+        allStudentsInAllEvaluations.forEach(name => {
+            globalScores[name] = { totalScore: 0, evaluations: [] };
+        });
+
+        allEvaluations.forEach(eval => {
+            Object.keys(eval.individualScores || {}).forEach(name => {
+                if (globalScores[name]) {
+                    const score = eval.individualScores[name]?.finalScore || 0;
+                    globalScores[name].totalScore += score;
+                    globalScores[name].evaluations.push(eval);
+                }
+            });
+        });
+
+        // 2. Criar o HTML da tabela principal
+        let tableHtml = `<div class="p-4 bg-gray-100 rounded-lg mb-4">
+                            <p class="text-sm font-medium text-gray-700">Somatório das Notas Individuais (Todas as Provas)</p>
+                        </div>
+                        <div class="space-y-2" id="global-score-list">`;
+        
+        allStudentsInAllEvaluations.forEach(name => {
+            const totalScore = globalScores[name]?.totalScore?.toFixed(2) || '0.00';
+            const scoreClass = parseFloat(totalScore) > 0 ? 'score-good' : 'score-bad';
+            const safeNameForJs = name.replace(/'/g, "\\'");
+            
+            // Item principal na tabela
+            tableHtml += `
+                <div class="p-3 border rounded-lg bg-white">
+                    <div class="flex justify-between items-center">
+                        <span class="font-medium">${name}</span>
+                        <div class="flex items-center space-x-3">
+                            <span class="text-2xl font-extrabold ${scoreClass}">${totalScore} pts</span>
+                            <button onclick="toggleGlobalDetails('${safeNameForJs}')" 
+                                    class="p-1 bg-gray-200 text-gray-700 rounded-full hover:bg-gray-300 transition duration-150 transform hover:scale-110 no-print">
+                                <!-- Ícone de Expansão/Detalhes -->
+                                <svg id="icon-${safeNameForJs}" class="w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path id="path-${safeNameForJs}" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Detalhes expansíveis
+            tableHtml += `<div id="details-${safeNameForJs}" class="detail-row bg-gray-50 p-3 border border-t-0 rounded-lg">`;
+            
+            if (globalScores[name].evaluations.length > 0) {
+                globalScores[name].evaluations.forEach(eval => {
+                    const config = EVALUATION_CONFIGS[eval.type || 'estabilizacao']; // Usa fallback aqui
+                    const finalScore = eval.individualScores[name]?.finalScore || 0.0;
+                    const penaltyCount = eval.individualScores[name]?.penaltyCount || 0;
+                    
+                    let penaltyDetailHtml = '';
+                    
+                    // Determina o sub-título
+                    let subDetail = '';
+                    if (config.is_estabilizacao && eval.subtype) {
+                        subDetail = ` - ${eval.subtype === '4rodas' ? 'Sobre 04 Rodas' : 'Tombado'}`;
+                    } else if (config.is_corte && eval.subtype) {
+                        subDetail = ` - ${eval.subtype === 'painel' ? 'Rebatimento de Painel' : 'Rebatimento Lateral de Teto'}`;
+                    }
+
+
+                    // Construção do resumo de penalidades
+                    Object.keys(eval.penalties).forEach(responsibleName => {
+                        const penalties = eval.penalties[responsibleName];
+                        
+                        Object.keys(penalties).forEach(pId => {
+                            const pCount = penalties[pId];
+                            if (pCount > 0) {
+                                // Encontra o nome da penalidade para exibição
+                                let pName = pId;
+                                
+                                // Lógica para obter a lista correta de penalidades, usando o fallback
+                                let penaltiesList = config.penalties;
+                                if (config.is_corte && eval.subtype) {
+                                    penaltiesList = config.penalties[eval.subtype];
+                                } else if (!Array.isArray(penaltiesList)) {
+                                     // Se não for corte nem array (dados antigos), tenta usar o array padrão
+                                     penaltiesList = COMMON_PENALTIES; 
+                                }
+                                
+                                // Se for um array de strings, busca pelo índice
+                                if (Array.isArray(penaltiesList)) {
+                                    const index = parseInt(pId.split('-')[1]);
+                                    pName = penaltiesList[index] || pId;
+                                }
+
+                                penaltyDetailHtml += `
+                                    <li class="text-xs">
+                                        Responsável: ${responsibleName === name ? 'Individual' : responsibleName} | 
+                                        Penalidade: ${pName} (${pCount}x)
+                                    </li>
+                                `;
+                            }
+                        });
+                    });
+                    
+                    tableHtml += `
+                        <div class="mb-3 p-3 border rounded bg-white">
+                            <p class="font-semibold text-sm text-indigo-700">Prova: ${config.name}${subDetail}</p>
+                            <p class="text-xs">Nota Individual: <span class="font-bold score-good">${finalScore.toFixed(1)} pts</span> | Tempo: ${eval.time}</p>
+                            <p class="text-xs">Ocorrências Totais na Prova: ${penaltyCount}</p>
+                            <ul class="list-none mt-2 space-y-0 text-red-700">
+                                ${penaltyDetailHtml || '<li class="text-xs text-gray-500">Nenhuma penalidade registrada diretamente a este aluno/grupo.</li>'}
+                            </ul>
+                        </div>
+                    `;
+                });
+            } else {
+                 tableHtml += `<p class="text-gray-500">Nenhuma prova encontrada para este aluno.</p>`;
+            }
+            
+            tableHtml += `</div>`; // Fecha details
+        });
+
+        outputEl.innerHTML = tableHtml + `</div>`; // Fecha global-score-list
+    }
+    
+    // NOVO: Função para expandir/recolher os detalhes
+    window.toggleGlobalDetails = function(studentIdSafe) {
+        const detailEl = document.getElementById(`details-${studentIdSafe}`);
+        const iconEl = document.getElementById(`icon-${studentIdSafe}`);
+        
+        if (detailEl.classList.contains('open')) {
+            detailEl.classList.remove('open');
+            iconEl.style.transform = 'rotate(0deg)';
+        } else {
+            // Fecha todos os outros (opcional, mas limpa a UI)
+            document.querySelectorAll('.detail-row.open').forEach(el => el.classList.remove('open'));
+            document.querySelectorAll('.transition-transform').forEach(el => el.style.transform = 'rotate(0deg)');
+            
+            detailEl.classList.add('open');
+            iconEl.style.transform = 'rotate(180deg)';
+        }
+    }
+
+
+    window.generateStudentReport = function() {
+        const studentName = document.getElementById('report-student-select').value;
+        const outputEl = document.getElementById('student-report-output');
+
+        if (!studentName) {
+            outputEl.innerHTML = '<p class="text-gray-500 text-center">Selecione um aluno para gerar o relatório.</p>';
+            return;
+        }
+
+        const allEvaluations = loadEvaluations();
+        // Filtra as avaliações onde o aluno está listado
+        const studentEvaluations = allEvaluations.filter(e => e.studentNames.includes(studentName));
+
+        if (studentEvaluations.length === 0) {
+             outputEl.innerHTML = `<p class="text-gray-500 text-center">Nenhuma avaliação encontrada para ${studentName}.</p>`;
+             return;
+        }
+
+        let reportHtml = `<h4 class="text-xl font-bold mb-4 text-primary">Histórico de Provas de ${studentName}</h4>`;
+        let totalScoreSum = 0;
+        let totalScoreCount = 0;
+
+        studentEvaluations.forEach(eval => {
+            const config = EVALUATION_CONFIGS[eval.type || 'estabilizacao']; // Usa fallback
+            const finalScore = eval.individualScores[studentName]?.finalScore || 0.0;
+            const penaltyCount = eval.individualScores[studentName]?.penaltyCount || 0;
+            
+            totalScoreSum += finalScore; // Soma o total
+            totalScoreCount++;
+            
+            // Determina o sub-título
+            let subDetail = '';
+            if (config.is_estabilizacao && eval.subtype) {
+                subDetail = ` (${eval.subtype === '4rodas' ? 'Sobre 04 Rodas' : 'Tombado'})`;
+            } else if (config.is_corte && eval.subtype) {
+                subDetail = ` (${eval.subtype === 'painel' ? 'Rebatimento de Painel' : 'Rebatimento Lateral de Teto'})`;
+            }
+
+
+            reportHtml += `
+                <div class="p-3 border rounded-lg bg-gray-50">
+                    <p class="font-bold text-lg text-gray-800">${config.name}${subDetail} (${finalScore.toFixed(1)} pts)</p>
+                    <p class="text-sm">Data: ${new Date(eval.updatedAt).toLocaleDateString('pt-BR')} | Tempo: ${eval.time}</p>
+                    <p class="text-sm">Penalidades Aplicadas: ${penaltyCount}</p>
+                    <ul class="text-xs ml-4 mt-2 list-disc text-gray-600">
+                        <li>**Grupo:** ${eval.studentNames.join(', ')}</li>
+                        ${Object.keys(eval.penalties).map(name => {
+                            const penalties = eval.penalties[name];
+                            return Object.keys(penalties).map(pId => {
+                                const pCount = penalties[pId];
+                                
+                                // Lógica para encontrar o nome correto da penalidade
+                                let pName = pId;
+                                
+                                // Obtém a lista correta de penalidades, usando o fallback
+                                let penaltiesList = config.penalties;
+                                if (config.is_corte && eval.subtype) {
+                                    penaltiesList = config.penalties[eval.subtype];
+                                } else if (!Array.isArray(penaltiesList)) {
+                                     penaltiesList = COMMON_PENALTIES; 
+                                }
+                                
+                                // Se for um array de strings, busca pelo índice
+                                if (Array.isArray(penaltiesList)) {
+                                    const index = parseInt(pId.split('-')[1]);
+                                    pName = penaltiesList[index] || pId;
+                                }
+
+                                
+                                return `<li>${name} - ${pName}: ${pCount}x</li>`;
+                            }).join('');
+                        }).join('')}
+                    </ul>
+                </div>
+            `;
+        });
+        
+        // Exibe o somatório total
+        outputEl.innerHTML = `
+            <div class="p-4 mb-4 bg-green-100 border border-green-300 rounded-lg">
+                <p class="text-lg font-bold text-green-800">Somatório Total das Notas:</p>
+                <p class="text-3xl font-extrabold text-green-600">${totalScoreSum.toFixed(2)} pts</p>
+                <p class="text-sm text-gray-600 mt-2">(Soma das ${totalScoreCount} provas realizadas)</p>
+            </div>
+            ${reportHtml}
+        `;
+    }
+
+    window.showList = function() {
+        document.getElementById('form-view').style.display = 'none';
+        document.getElementById('report-view').style.display = 'none';
+        document.getElementById('list-view').style.display = 'block';
+        document.getElementById('form-title').textContent = 'Nova Avaliação';
+        
+        document.getElementById('evaluation-form').reset();
+        document.getElementById('evaluation-id').value = '';
+        studentPenalties = {};
+        
+        renderEvaluationsList();
+    }
+
+    window.showForm = function(evaluation = null) {
+        const formIdEl = document.getElementById('evaluation-id');
+        const minutesEl = document.getElementById('time-minutes');
+        const secondsEl = document.getElementById('time-seconds');
+        const millisecondsEl = document.getElementById('time-milliseconds');
+        const typeEl = document.getElementById('evaluation-type');
+        const subtypeSelectEl = document.getElementById('corte-subtype-select');
+        const estabilizacaoSubtypeEl = document.getElementById('estabilizacao-subtype-select');
+        
+        // Determina o tipo de prova, se estiver editando, usa o tipo salvo; senão, usa o selecionado na lista
+        const type = evaluation ? (evaluation.type || 'estabilizacao') : document.getElementById('evaluation-type-select').value;
+        const config = getCurrentEvaluationConfig(type);
+
+        // ATUALIZADO: Inicialização segura de PENALTIES na entrada do formulário
+        if (config.is_corte) {
+            const subtype = evaluation?.subtype || 'painel';
+            PENALTIES = config.penalties[subtype].map((name, index) => ({ id: `penalty-${index}`, name }));
+        } else {
+            PENALTIES = config.penalties.map((name, index) => ({ id: `penalty-${index}`, name }));
+        }
+        
+        // Esconde/mostra o seletor de tempo se a prova for baseada em tempo
+        document.getElementById('time-selector-container').classList.toggle('hidden', !config.is_timed_score);
+        // Esconde/mostra o seletor de sub-tipo se for prova de corte
+        document.getElementById('corte-subtype-container').style.display = config.is_corte ? 'block' : 'none';
+        // Esconde/mostra o seletor de cenário se for prova de estabilização
+        document.getElementById('estabilizacao-subtype-container').style.display = config.is_estabilizacao ? 'block' : 'none';
+
+
+        if (evaluation) {
+            const studentNamesArray = evaluation.studentNames || [];
+            const mainName = studentNamesArray.length > 0 ? studentNamesArray[0] : 'Grupo Desconhecido';
+            document.getElementById('form-title').textContent = `Editar Avaliação: ${config.name} (${mainName})`;
+            
+            formIdEl.value = evaluation.id;
+            
+            // Popula os seletores de tempo
+            const timeObj = timeStringToObjects(evaluation.time);
+            minutesEl.value = timeObj.minutes;
+            secondsEl.value = timeObj.seconds;
+            millisecondsEl.value = String(timeObj.milliseconds).padStart(3, '0'); // Mantém 3 dígitos
+            
+            studentPenalties = evaluation.penalties || {}; 
+            
+            // Popula o sub-tipo para edição
+            if (config.is_corte && evaluation.subtype) {
+                 subtypeSelectEl.value = evaluation.subtype;
+            } else if (config.is_corte) {
+                 subtypeSelectEl.value = 'painel';
+            }
+
+            // NOVO: Popula o cenário de estabilização
+            if (config.is_estabilizacao && evaluation.subtype) {
+                 estabilizacaoSubtypeEl.value = evaluation.subtype;
+            } else if (config.is_estabilizacao) {
+                 estabilizacaoSubtypeEl.value = '4rodas';
+            }
+            
+            renderStudentInputs(studentNamesArray); 
+            renderPenaltiesRegistration(); 
+        } else {
+            document.getElementById('form-title').textContent = `Nova Avaliação: ${config.name}`;
+            formIdEl.value = '';
+            
+            // Reseta seletores
+            minutesEl.value = 0;
+            secondsEl.value = 0;
+            millisecondsEl.value = '000';
+            
+            // Reseta sub-tipo
+            if (config.is_corte) {
+                 subtypeSelectEl.value = 'painel';
+            }
+            if (config.is_estabilizacao) {
+                 estabilizacaoSubtypeEl.value = '4rodas';
+            }
+
+
+            studentPenalties = {};
+            renderStudentInputs([]); 
+            renderPenaltiesRegistration(); 
+        }
+        
+        // Define o tipo de prova no campo hidden
+        typeEl.value = type;
+
+
+        document.getElementById('list-view').style.display = 'none';
+        document.getElementById('report-view').style.display = 'none';
+        document.getElementById('form-view').style.display = 'block';
+    }
+    
+    // Salvar/Atualizar Avaliação
+    document.getElementById('evaluation-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formId = document.getElementById('evaluation-id').value;
+        const studentNames = getStudentNamesFromForm(); 
+        const evaluationType = document.getElementById('evaluation-type').value;
+        const config = getCurrentEvaluationConfig(evaluationType);
+
+        if (studentNames.length === 0) {
+            alert('É necessário adicionar pelo menos um aluno.');
+            return;
+        }
+        
+        // Chama calculateScores para obter notas e tempo formatado
+        const { individualScores, timeStr } = calculateScores();
+
+        // Limpa e organiza as penalidades
+        const cleanedPenalties = {};
+        Object.keys(studentPenalties).forEach(name => {
+            if (studentPenalties[name] && Object.keys(studentPenalties[name]).length > 0) {
+                cleanedPenalties[name] = studentPenalties[name];
+            }
+        });
+        
+        // NOVO: Adiciona o sub-tipo da prova de corte ou estabilização
+        let subtype = undefined;
+        if (config.is_corte) {
+             subtype = document.getElementById('corte-subtype-select').value;
+        } else if (config.is_estabilizacao) {
+             subtype = document.getElementById('estabilizacao-subtype-select').value;
+        }
+
+
+        const evaluationData = {
+            id: formId || generateId(),
+            type: evaluationType, // Salva o tipo de prova
+            subtype: subtype,
+            studentNames: studentNames,
+            time: timeStr, // Salva o tempo formatado
+            penalties: cleanedPenalties,
+            individualScores: individualScores, // Salva as notas finais por aluno
+            updatedAt: new Date().toISOString(),
+        };
+
+        let evaluations = loadEvaluations();
+        
+        if (formId) {
+            const index = evaluations.findIndex(e => e.id === formId);
+            if (index !== -1) {
+                evaluations[index] = evaluationData;
+                console.log(`Avaliação (ID: ${formId}) atualizada com sucesso.`);
+            } else {
+                console.error("Erro: Avaliação a ser atualizada não encontrada.");
+                evaluations.push(evaluationData);
+            }
+        } else {
+            evaluations.push(evaluationData);
+            console.log(`Nova avaliação (ID: ${evaluationData.id}) salva com sucesso.`);
+        }
+        
+        saveEvaluations(evaluations);
+        showList();
+    });
+    
+    // Função para Excluir Avaliação (AGORA USADA APENAS PELA LISTA)
+    window.deleteEvaluation = function() {
+        // Esta função não é mais usada, mas a deixamos para evitar erros se ainda houver referências
+        console.error("Função deleteEvaluation() antiga foi removida. Use deleteEvaluationInList(id).");
+    }
+
+
+    // --- INICIALIZAÇÃO ---
+
+    function initializeApp() {
+        populateTimeSelectors(); // Inicializa os seletores de tempo
+
+        document.getElementById('loading-spinner').style.display = 'none';
+        document.getElementById('main-content').style.display = 'block';
+        
+        renderEvaluationsList(); 
+        renderStudentInputs([]); 
+        renderPenaltiesRegistration(); 
+        
+        console.log("Aplicação inicializada em modo de armazenamento local (localStorage).");
+    }
+
+    initializeApp();
+
+</script>
+
+</body>
+</html>
