@@ -25,82 +25,20 @@
     </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
-        
-        .container-main {
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            padding: 1rem;
-            background-color: #F3F4F6;
-        }
-
-        .card {
-            width: 100%;
-            max-width: 800px;
-            background: white;
-            border-radius: 1rem;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            padding: 1.5rem;
-        }
-        
+        .container-main { min-height: 100vh; display: flex; justify-content: center; align-items: flex-start; padding: 1rem; background-color: #F3F4F6; }
+        .card { width: 100%; max-width: 800px; background: white; border-radius: 1rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); padding: 1.5rem; }
         #individual-scores-table-print { display: none; }
-        .score-good { color: #10B981; font-weight: 700; }
-        .score-bad { color: #DC2626; font-weight: 700; }
-        
-        .detail-row {
-            transition: max-height 0.3s ease-out;
-            overflow: hidden;
-            max-height: 0;
-            margin-top: 0 !important;
-            margin-bottom: 0 !important;
-        }
-        .detail-row.open {
-            max-height: 5000px; 
-            margin-bottom: 1rem !important;
-        }
-
-        .loading-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(255,255,255,0.8);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-        }
-
-        .stat-card {
-            background: white;
-            border: 1px solid #e5e7eb;
-            padding: 1rem;
-            border-radius: 0.75rem;
-            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-        }
-
+        .detail-row { transition: max-height 0.3s ease-out; overflow: hidden; max-height: 0; }
+        .detail-row.open { max-height: 5000px; padding: 1rem 0; }
+        .loading-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .stat-card { background: white; border: 1px solid #e5e7eb; padding: 1.25rem; border-radius: 0.75rem; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
         @media print {
-            .no-print, #list-view, #dashboard-view, .flex-col > button, .space-x-2 button, .print-hidden, #report-selection-container {
-                display: none !important;
-            }
+            .no-print, #sync-status-bar, button, .print-hidden { display: none !important; }
             .card { box-shadow: none; padding: 0; max-width: 100%; }
-            #form-view { display: block !important; }
-            #penalties-summary { background-color: #fff; border: 1px solid #ccc; }
-            h1, h2, h3 { color: black !important; }
+            #form-view, #report-view, #dashboard-view { display: block !important; }
             .print-view-only { display: block !important; }
             #individual-scores-table { display: none !important; }
-            #individual-scores-table-print {
-                display: block !important;
-                margin-top: 1rem;
-                padding-top: 1rem;
-                border-top: 1px solid #ccc;
-            }
-            .score-title-no-print { display: none !important; }
-            #report-view .detail-row {
-                max-height: none !important;
-                overflow: visible !important;
-                display: block !important;
-            }
-            #report-view { display: block !important; }
+            #individual-scores-table-print { display: block !important; margin-top: 1rem; border-top: 1px solid #ccc; }
         }
     </style>
 </head>
@@ -109,25 +47,38 @@
 <div id="loading-db" class="loading-overlay" style="display: none;">
     <div class="flex flex-col items-center">
         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-2"></div>
-        <p class="text-xs font-bold text-gray-500 uppercase tracking-widest text-center">Sincronizando Dados...</p>
+        <p class="text-xs font-bold text-gray-500 uppercase tracking-widest text-center">Processando Dados...</p>
     </div>
 </div>
 
 <div id="app" class="container-main">
     <div class="card">
-        <h1 class="text-3xl font-black mb-6 text-center text-primary uppercase tracking-tighter tracking-widest">Avaliação CFSd 2025</h1>
+        <!-- Status Bar -->
+        <div id="sync-status-bar" class="mb-4 hidden no-print">
+            <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-3 text-[10px] flex justify-between items-center rounded-lg">
+                <p class="font-bold uppercase tracking-tighter">
+                    ⚠️ <span id="pending-count">0</span> avaliações locais pendentes
+                </p>
+                <button onclick="processPendingSync()" class="bg-yellow-600 text-white px-3 py-1 rounded font-black">SINCRONIZAR</button>
+            </div>
+        </div>
+
+        <h1 class="text-3xl font-black mb-6 text-center text-primary uppercase tracking-tighter no-print">Avaliação CFSd 2025</h1>
         
         <div id="main-content">
-            <!-- LISTAGEM INICIAL -->
+            <!-- List View -->
             <div id="list-view">
                 <div class="flex justify-between items-center mb-4 border-b pb-2">
-                    <h2 class="text-xl font-bold text-gray-700 tracking-tight uppercase">Registros Realizados</h2>
-                    <span id="sync-indicator" class="px-2 py-1 rounded bg-green-100 text-green-700 text-[9px] font-black uppercase tracking-widest">Nuvem Conectada</span>
+                    <h2 class="text-xl font-bold text-gray-700 tracking-tight uppercase">Registros</h2>
+                    <div class="flex items-center space-x-2">
+                        <span id="connection-dot" class="h-2 w-2 rounded-full bg-green-500"></span>
+                        <span class="text-[9px] font-black uppercase text-gray-400">Sistema Ativo</span>
+                    </div>
                 </div>
                 
                 <div class="mb-6 no-print">
-                    <label for="evaluation-type-select" class="block text-[10px] font-black text-gray-400 mb-1 uppercase tracking-widest">Filtrar Categoria:</label>
-                    <select id="evaluation-type-select" onchange="renderEvaluationsList()" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary focus:ring-primary p-3 border text-lg font-bold text-gray-700 bg-gray-50">
+                    <label for="evaluation-type-select" class="block text-[10px] font-black text-gray-400 mb-1 uppercase">Categoria de Prova:</label>
+                    <select id="evaluation-type-select" onchange="renderEvaluationsList()" class="block w-full rounded-lg border-gray-300 p-3 border text-lg font-bold text-gray-700 bg-gray-50">
                         <option value="estabilizacao">1. Estabilização Veicular (3.0 pts)</option>
                         <option value="retirada">2. Retirada de Vítimas (3.0 pts)</option>
                         <option value="corte">3. Técnica de Corte (2.0 pts)</option>
@@ -135,43 +86,30 @@
                 </div>
 
                 <div class="flex flex-col sm:flex-row gap-3 mb-4 no-print">
-                    <button onclick="showForm()" class="flex-1 py-4 bg-primary text-white font-black rounded-lg hover:bg-red-700 transition shadow-lg uppercase text-xs tracking-widest">
-                        + Nova Avaliação
-                    </button>
-                    <button onclick="showReportView('individual')" class="flex-1 py-4 bg-yellow-600 text-white font-black rounded-lg hover:bg-yellow-700 transition shadow-md text-xs uppercase tracking-widest">
-                        Histórico por Militar
-                    </button>
+                    <button onclick="showForm()" class="flex-1 py-4 bg-primary text-white font-black rounded-lg uppercase shadow-lg">+ Nova Avaliação</button>
+                    <button onclick="showReportView('individual')" class="flex-1 py-4 bg-yellow-600 text-white font-black rounded-lg shadow-md">Histórico Militar</button>
                 </div>
                 
                 <div class="flex flex-col sm:flex-row gap-3 mb-6 no-print">
-                    <button onclick="showDashboardView()" class="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition shadow-md text-xs uppercase tracking-widest">
-                        Painel Gerencial
-                    </button>
-                    <button onclick="showReportView('global')" class="flex-1 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition shadow-md text-xs uppercase tracking-widest">
-                        Quadro de Notas
-                    </button>
+                    <button onclick="showDashboardView()" class="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-lg shadow-md">Painel Gerencial</button>
+                    <button onclick="showReportView('global')" class="flex-1 py-3 bg-green-600 text-white font-bold rounded-lg shadow-md">Quadro de Notas</button>
                 </div>
                 
                 <div id="evaluations-list" class="space-y-3"></div>
-                
-                <div id="list-empty" class="text-center py-10 text-gray-400 border-2 border-dashed rounded-xl" style="display:none;">
-                    <p class="font-bold uppercase text-xs tracking-widest">Nenhum registro encontrado</p>
-                </div>
-
-                <button onclick="exportToCSV()" class="w-full py-2 mt-6 text-gray-400 text-[10px] font-bold uppercase tracking-[0.2em] border-t hover:text-primary transition">Exportar Planilha de Backup</button>
+                <div id="list-empty" class="text-center py-10 text-gray-400 border-2 border-dashed rounded-xl" style="display:none;">Nenhum registro encontrado.</div>
             </div>
 
-            <!-- FORMULÁRIO -->
+            <!-- Formulário -->
             <div id="form-view" style="display:none;">
-                <h2 id="form-title" class="text-2xl font-black mb-4 text-gray-800 border-b pb-2 uppercase tracking-tighter font-bold italic">Avaliação Prática</h2>
+                <h2 id="form-title" class="text-2xl font-black mb-4 text-gray-800 border-b pb-2 uppercase tracking-tighter no-print">Avaliação</h2>
                 <form id="evaluation-form" class="space-y-4">
                     <input type="hidden" id="evaluation-id">
                     <input type="hidden" id="evaluation-type">
 
                     <div class="no-print">
-                        <label for="evaluation-turma" class="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">Descrição da Turma:</label>
-                        <select id="evaluation-turma" required onchange="handleTurmaChange()" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary focus:ring-primary p-3 border text-sm font-black uppercase text-gray-700 bg-white shadow-inner">
-                            <option value="">-- Selecione --</option>
+                        <label for="evaluation-turma" class="block text-[10px] font-black text-gray-400 mb-2 uppercase">Turma:</label>
+                        <select id="evaluation-turma" required onchange="handleTurmaChange()" class="block w-full rounded-lg border-gray-300 p-3 border text-sm font-black uppercase text-gray-700 bg-white shadow-inner">
+                            <option value="">-- Selecione a Turma --</option>
                             <option value="ALFA">ALFA</option>
                             <option value="BRAVO">BRAVO</option>
                             <option value="CHARLIE">CHARLIE</option>
@@ -186,160 +124,135 @@
                     </div>
 
                     <div class="no-print border-t pt-4">
-                        <label class="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">Equipe Avaliada:</label>
+                        <label class="block text-[10px] font-black text-gray-400 mb-2 uppercase">Equipe Avaliada:</label>
                         <div id="students-container" class="space-y-2 mb-3"></div>
-                        <div id="student-helper-text" class="text-[10px] bg-gray-50 border p-2 rounded text-gray-500 italic mb-2">Aguardando seleção de turma...</div>
-                        <button type="button" onclick="addStudentInput()" class="w-full py-2 border border-dashed border-gray-300 text-gray-500 rounded-lg hover:bg-gray-50 transition text-xs font-bold uppercase tracking-tighter">
-                            + Adicionar Militar na Equipe
-                        </button>
+                        <div id="student-helper-text" class="text-[10px] bg-gray-50 border p-2 rounded text-gray-500 italic mb-2">Selecione uma turma primeiro.</div>
+                        <button type="button" onclick="addStudentInput()" class="w-full py-2 border border-dashed text-gray-500 rounded-lg text-xs font-bold uppercase tracking-tighter">+ Adicionar Militar na Equipe</button>
                     </div>
 
                     <div class="no-print border-t pt-4">
-                        <label class="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">Instrutores Responsáveis:</label>
+                        <label class="block text-[10px] font-black text-gray-400 mb-2 uppercase">Instrutores / Avaliadores:</label>
                         <div id="instructors-container" class="space-y-2 mb-3"></div>
-                        <button type="button" onclick="addInstructorInput()" class="w-full py-2 border border-dashed border-gray-300 text-gray-500 rounded-lg hover:bg-gray-50 transition text-xs font-bold uppercase tracking-tighter">
-                            + Adicionar Instrutor
-                        </button>
+                        <button type="button" onclick="addInstructorInput()" class="w-full py-2 border border-dashed text-gray-500 rounded-lg text-xs font-bold uppercase tracking-tighter">+ Adicionar Instrutor</button>
                     </div>
 
                     <div id="print-data-container" class="space-y-2 mb-4 print-view-only"></div>
                     
-                    <div class="no-print" id="corte-subtype-container" style="display: none;">
-                        <label for="corte-subtype-select" class="block text-xs font-black text-gray-400 mb-1 uppercase tracking-widest">Técnica Específica:</label>
-                        <select id="corte-subtype-select" onchange="renderPenaltiesRegistration()" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary focus:ring-primary p-3 border text-sm font-black uppercase bg-white">
-                            <option value="painel">Rebatimento de Painel</option>
-                            <option value="teto">Rebatimento Lateral de Teto</option>
-                        </select>
+                    <div id="estabilizacao-subtype-container" style="display: none;" class="no-print">
+                        <label class="block text-xs font-black text-gray-400 mb-1 uppercase">Cenário Estabilização:</label>
+                        <select id="estabilizacao-subtype-select" onchange="renderPenaltiesRegistration()" class="block w-full rounded-lg border-gray-300 p-3 border text-sm font-black uppercase bg-white"><option value="4rodas">4 Rodas</option><option value="tombado">Tombado</option></select>
                     </div>
-                    
-                    <div class="no-print" id="estabilizacao-subtype-container" style="display: none;">
-                        <label for="estabilizacao-subtype-select" class="block text-xs font-black text-gray-400 mb-1 uppercase tracking-widest">Cenário da Estabilização:</label>
-                        <select id="estabilizacao-subtype-select" onchange="renderPenaltiesRegistration()" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary focus:ring-primary p-3 border text-sm font-black uppercase bg-white">
-                            <option value="4rodas">Veículo Sobre 04 Rodas (1.5 pts)</option>
-                            <option value="tombado">Veículo Tombado (1.5 pts)</option>
-                        </select>
+                    <div id="corte-subtype-container" style="display: none;" class="no-print">
+                        <label class="block text-xs font-black text-gray-400 mb-1 uppercase">Técnica Corte:</label>
+                        <select id="corte-subtype-select" onchange="renderPenaltiesRegistration()" class="block w-full rounded-lg border-gray-300 p-3 border text-sm font-black uppercase bg-white"><option value="painel">Rebatimento Painel</option><option value="teto">Rebatimento Teto</option></select>
                     </div>
 
-                    <!-- Cronômetro -->
-                    <div class="no-print" id="time-selector-container">
-                        <label class="block text-sm font-medium text-gray-700 mb-1 font-bold">Tempo de Execução:</label>
+                    <div id="time-selector-container" class="no-print">
+                        <label class="block text-sm font-black text-gray-700 mb-1 uppercase">Tempo de Execução:</label>
                         <div class="flex space-x-3 items-end">
-                            <div class="flex-1">
-                                <label for="time-minutes" class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Mins</label>
-                                <select id="time-minutes" onchange="calculateScores()" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm p-3 border font-mono bg-white text-lg font-bold shadow-inner"></select>
-                            </div>
-                            <div class="flex-1">
-                                <label for="time-seconds" class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Segs</label>
-                                <select id="time-seconds" onchange="calculateScores()" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm p-3 border font-mono bg-white text-lg font-bold shadow-inner"></select>
-                            </div>
-                            <div class="w-1/4">
-                                <label for="time-milliseconds" class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">ms</label>
-                                <input type="number" id="time-milliseconds" oninput="calculateScores()" min="0" max="999" value="000" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm p-3 border text-center font-mono font-bold text-lg shadow-inner">
-                            </div>
+                            <div class="flex-1"><label class="text-[10px] text-gray-400 font-bold uppercase">Mins</label><select id="time-minutes" onchange="calculateScores()" class="block w-full rounded-lg border-gray-300 p-3 border font-mono font-bold bg-white"></select></div>
+                            <div class="flex-1"><label class="text-[10px] text-gray-400 font-bold uppercase">Segs</label><select id="time-seconds" onchange="calculateScores()" class="block w-full rounded-lg border-gray-300 p-3 border font-mono font-bold bg-white"></select></div>
+                            <div class="w-1/4"><label class="text-[10px] text-gray-400 font-bold uppercase">ms</label><input type="number" id="time-milliseconds" oninput="calculateScores()" min="0" max="999" value="000" class="block w-full rounded-lg border-gray-300 p-3 border text-center font-mono font-bold bg-white"></div>
                         </div>
-                        <p class="text-xs text-gray-500 mt-2 font-bold italic tracking-tighter">Nota Base (Tempo): <span id="base-score" class="text-primary font-black">0.0</span></p>
+                        <p class="text-xs text-gray-500 mt-2 font-bold italic">Nota Base (Tempo): <span id="base-score" class="text-primary font-black">0.0</span></p>
                     </div>
 
-                    <!-- Barema -->
-                    <h3 class="text-sm font-black pt-4 text-gray-800 no-print uppercase tracking-widest" id="penalties-title">Itens de Barema Técnico</h3>
+                    <h3 class="text-sm font-black pt-4 text-gray-800 no-print uppercase tracking-widest">Barema Técnico</h3>
                     <div id="penalties-registration-list" class="space-y-4 p-4 border rounded-lg bg-gray-50 no-print"></div>
-                    
-                    <div id="penalties-summary" class="mt-6 p-4 bg-yellow-50 rounded-lg text-sm border border-yellow-200 shadow-inner">
-                        <h4 class="font-black mb-3 text-gray-800 uppercase text-[10px] tracking-widest border-b border-yellow-200 pb-1 font-bold">Espelho de Ocorrências:</h4>
+                    <div id="penalties-summary" class="mt-6 p-4 bg-yellow-50 rounded-lg border border-yellow-200 shadow-inner">
+                        <h4 class="font-black mb-3 uppercase text-[10px] tracking-widest border-b border-yellow-200 pb-1">Espelho de Ocorrências:</h4>
                         <ul id="penalty-breakdown" class="space-y-3"></ul>
                     </div>
                     
-                    <!-- Resultado -->
                     <div class="pt-6 border-t-2 mt-6 border-gray-200">
-                        <div class="flex justify-between items-center mb-4 p-4 bg-gray-100 rounded-lg shadow-inner print-hidden">
-                            <span class="text-xs font-bold text-gray-500 uppercase tracking-widest">Soma de Penalidades:</span>
+                        <div class="flex justify-between items-center mb-4 p-4 bg-gray-100 rounded-lg shadow-inner no-print">
+                            <span class="text-xs font-bold text-gray-500 uppercase">Soma de Penalidades:</span>
                             <span id="penalty-count" class="text-2xl font-black text-primary">0</span>
                         </div>
-                        <h3 class="text-xl font-bold mb-3 text-gray-800 score-title-no-print text-center uppercase tracking-tighter border-b pb-2">Resultado das Notas</h3>
+                        <h3 class="text-xl font-bold mb-3 text-gray-800 text-center uppercase">Resultados das Notas</h3>
                         <div id="individual-scores-table" class="space-y-2"></div>
-                        <div id="individual-scores-table-print" class="print-view-only"></div>
                     </div>
 
                     <div class="flex flex-col sm:flex-row gap-3 mt-6 no-print">
-                        <button type="submit" class="flex-1 py-4 bg-green-600 text-white font-black rounded-lg hover:bg-green-700 transition shadow-lg uppercase text-xs tracking-widest">Gravar no Supabase</button>
-                        <button type="button" onclick="showList()" class="flex-1 py-4 bg-gray-500 text-white font-black rounded-lg hover:bg-gray-600 transition shadow-md uppercase text-xs tracking-widest">Sair</button>
+                        <button type="submit" class="flex-1 py-4 bg-green-600 text-white font-black rounded-lg uppercase shadow-lg">Salvar Avaliação</button>
+                        <button type="button" onclick="showList()" class="flex-1 py-4 bg-gray-500 text-white font-black rounded-lg uppercase">Sair</button>
                     </div>
-                    <button type="button" onclick="triggerPrint()" class="w-full py-3 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-600 transition shadow-md mt-3 no-print uppercase text-xs tracking-widest">Imprimir / Salvar PDF</button>
                 </form>
             </div>
 
-            <!-- RELATÓRIOS -->
+            <!-- Relatórios -->
             <div id="report-view" style="display:none;">
-                <h2 class="text-2xl font-bold mb-4 text-gray-800 border-b pb-2 uppercase tracking-tighter" id="report-title">Relatório</h2>
-                <div id="report-selection-container" class="no-print"></div>
-                <div id="student-report-output" class="space-y-4 p-4 border rounded-lg bg-white shadow-md mt-4"></div>
-                <button onclick="showList()" class="w-full py-3 bg-gray-500 text-white font-black rounded-lg hover:bg-gray-600 transition shadow-md mt-6 no-print text-sm uppercase font-bold tracking-widest">Voltar para Lista Principal</button>
+                <h2 id="report-title" class="text-2xl font-black mb-4 border-b pb-2 uppercase text-primary no-print">Relatório</h2>
+                <div id="report-selection-container" class="no-print mb-4 flex flex-col gap-2"></div>
+                <div id="student-report-output" class="mt-4"></div>
+                <div class="flex gap-2 no-print">
+                    <button onclick="window.print()" class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-lg uppercase mt-6 shadow-md">Gerar PDF / Imprimir</button>
+                    <button onclick="showList()" class="flex-1 py-3 bg-gray-500 text-white font-bold rounded-lg mt-6 uppercase shadow-md">Voltar</button>
+                </div>
             </div>
 
-            <!-- PAINEL GERENCIAL -->
+            <!-- Dashboard -->
             <div id="dashboard-view" style="display:none;">
-                <h2 class="text-2xl font-bold mb-6 text-gray-800 border-b pb-2 uppercase tracking-widest text-primary">Painel Gerencial</h2>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                <h2 class="text-2xl font-black mb-6 text-primary uppercase border-b pb-2 no-print">Painel Gerencial</h2>
+                <div class="space-y-6">
                     <div class="stat-card border-l-4 border-indigo-500">
                         <h3 class="text-xs font-black text-gray-400 uppercase mb-4 tracking-widest font-bold">Desempenho por Turma (%)</h3>
                         <div id="dash-turma-stats" class="space-y-4"></div>
                     </div>
-                    
                     <div class="stat-card border-l-4 border-primary">
-                        <h3 class="text-xs font-black text-gray-400 uppercase mb-4 tracking-widest font-bold">Média por Prova</h3>
-                        <div id="dash-prova-stats" class="space-y-3"></div>
+                        <h3 class="text-xs font-black text-gray-400 uppercase mb-4 tracking-widest font-bold">Nota Média por Tipo de Prova</h3>
+                        <div id="dash-prova-stats" class="grid grid-cols-1 sm:grid-cols-3 gap-3"></div>
+                    </div>
+                    <div class="stat-card border-l-4 border-yellow-500">
+                        <h3 class="text-xs font-black text-gray-400 uppercase mb-4 tracking-widest font-bold">Top 10 Ocorrências</h3>
+                        <div id="dash-penalty-stats" class="space-y-2"></div>
                     </div>
                 </div>
-
-                <div class="stat-card mb-8 border-l-4 border-yellow-500">
-                    <h3 class="text-xs font-black text-gray-400 uppercase mb-4 tracking-widest font-bold">Ranking de Ocorrências (Top 10)</h3>
-                    <div id="dash-penalty-stats" class="space-y-2"></div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 my-8 text-center no-print">
+                    <div class="stat-card"><p class="text-[10px] font-black text-gray-400 uppercase">Avaliações</p><p id="dash-total-evals" class="text-3xl font-black text-primary">0</p></div>
+                    <div class="stat-card"><p class="text-[10px] font-black text-gray-400 uppercase">Militares</p><p id="dash-total-militares" class="text-3xl font-black text-blue-600">0</p></div>
+                    <div class="stat-card"><p class="text-[10px] font-black text-gray-400 uppercase">Aproveitamento</p><p id="dash-pass-rate" class="text-3xl font-black text-green-500">0%</p></div>
+                    <div class="stat-card"><p class="text-[10px] font-black text-gray-400 uppercase">Categorias</p><p id="dash-total-types" class="text-3xl font-black text-orange-500">3</p></div>
                 </div>
-
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 text-center">
-                    <div class="stat-card">
-                        <p class="text-[10px] font-black text-gray-400 uppercase tracking-tighter">Avaliações</p>
-                        <p id="dash-total-evals" class="text-3xl font-black text-primary">0</p>
-                    </div>
-                    <div class="stat-card">
-                        <p class="text-[10px] font-black text-gray-400 uppercase tracking-tighter">Militares</p>
-                        <p id="dash-total-militares" class="text-3xl font-black text-blue-600">0</p>
-                    </div>
-                    <div class="stat-card">
-                        <p class="text-[10px] font-black text-gray-400 uppercase tracking-tighter italic">Notas > 70%</p>
-                        <p id="dash-pass-rate" class="text-3xl font-black text-green-500">0%</p>
-                    </div>
-                    <div class="stat-card">
-                        <p class="text-[10px] font-black text-gray-400 uppercase tracking-tighter">Instrutores</p>
-                        <p id="dash-total-instructors" class="text-3xl font-black text-orange-500">0</p>
-                    </div>
+                <div class="flex gap-2 no-print">
+                    <button onclick="window.print()" class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-lg uppercase shadow-md">Imprimir Painel</button>
+                    <button onclick="showList()" class="flex-1 py-3 bg-gray-500 text-white font-black rounded-lg uppercase shadow-md">Voltar</button>
                 </div>
-
-                <button onclick="showList()" class="w-full py-3 bg-gray-500 text-white font-black rounded-lg hover:bg-gray-600 transition shadow-md text-sm uppercase font-bold tracking-widest">Voltar para Início</button>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    // --- VARIÁVEIS DE CONTROLE ---
-    let studentCount = 0;
-    let instructorCount = 0;
+    // --- 1. CONSTANTES E CONFIGURAÇÕES ---
+    const TURMAS_ORDER = ['ALFA', 'BRAVO', 'CHARLIE', 'DELTA', 'ECHO', 'FOXTROT', 'GOLF', 'HOTEL', 'INDIAN', 'JULIET'];
+    const TIME_SCORES_1_5 = [{max:180,s:1.5},{max:190,s:1.4},{max:200,s:1.3},{max:210,s:1.2},{max:220,s:1.1},{max:230,s:1.0},{max:240,s:0.9},{max:250,s:0.8},{max:260,s:0.7},{max:270,s:0.6},{max:280,s:0.5},{max:290,s:0.4},{max:300,s:0.3},{max:310,s:0.2},{max:320,s:0.1},{max:Infinity,s:0.0}];
+    const TIME_SCORES_3_0 = [{max:300,s:3.0},{max:310,s:2.8},{max:320,s:2.6},{max:330,s:2.4},{max:340,s:2.2},{max:350,s:2.0},{max:360,s:1.8},{max:370,s:1.6},{max:380,s:1.4},{max:390,s:1.2},{max:400,s:1.0},{max:410,s:0.8},{max:420,s:0.6},{max:430,s:0.4},{max:440,s:0.2},{max:Infinity,s:0.0}];
+    const EVAL_CONFIGS = {
+        'estabilizacao': { name: 'Estabilização Veicular', short_name: 'Estabilização', base_score: 1.5, penalties: ["Utilizar calço não previsto na estabilização","Utilizar conjunto de escoras incorretamente","Colocar-se em situação insegura","Qualaque outro procedimento errado","Calço solto ou mal colocado (0,2/cada)"], penalty_deduction: 0.2, is_timed_score: true, is_estabilizacao: true },
+        'retirada': { name: 'Retirada de Vítimas', short_name: 'Retirada Vítimas', base_score: 3.0, penalties: ["Não realizar estabilização correta","Não realizar avaliação 360","Não realizar abordagem de frente","Não realizar procedimentos internos","Entrar no veículo antes da estabilização","Não imobilizar vítima corretamente","Retirada fora da técnica 30º","Não colocar O2 / Oxímetro / Colar","Não cobrir a vítima","Procedimento divergente ao ensinado"], penalty_deduction: 0.3, is_timed_score: true, is_estabilizacao: false },
+        'corte': { name: 'Técnica de Corte', short_name: 'Técnica Corte', base_score: 2.0, penalties: {
+            'painel': ["01. Abertura da porta (dobradiças)","02. Abertura da porta (fechadura)","03. Corte da coluna A (mediana)","04. Corte de alívio na base coluna A","05. Posicionar apoio extensor","Procedimento incorreto ou não previsto"],
+            'teto': ["01. Corte Coluna A superior","02. Corte Coluna B superior","03. Corte coluna C/D superior","04. Corte vidro dianteiro","05. 2 Cortes alívio teto","Item de barema não previsto"]
+        }, penalty_deduction: 0.1, is_timed_score: false, is_estabilizacao: false, is_corte: true }
+    };
+    const LOCAL_ALUNOS_KEY = 'offline_bombeiros_alunos';
+    const PENDING_SYNC_KEY = 'pending_sync_avaliacoes';
+    const supabaseClient = supabase.createClient('https://mnpnwmprnantdyqdtfef.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ucG53bXBybmFudGR5cWR0ZmVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYwMDcyOTcsImV4cCI6MjA4MTU4MzI5N30.f0Hg4ovkXmNUoqbC9nrFwhurPjJ9pnwJYYTtH20g-NM');
+
+    // --- 2. ESTADO GLOBAL ---
     let cachedEvaluations = [];
-    let cachedAlunos = []; 
-    let studentPenalties = {}; 
+    let cachedAlunos = [];
+    let studentPenalties = {};
     let allStudentsInAllEvaluations = [];
 
-    // --- FUNÇÕES UTILITÁRIAS ---
+    // --- 3. DECLARAÇÃO DE FUNÇÕES (HOISTED) ---
+
     function generateId() { return Date.now().toString(36) + Math.random().toString(36).substring(2, 9); }
     function timeObjectToString(obj) { return `${String(obj.minutes || 0).padStart(2, '0')}:${String(obj.seconds || 0).padStart(2, '0')}.${String(obj.milliseconds || 0).padStart(3, '0')}`; }
-    function timeStringToObjects(timeStr) {
-        if (!timeStr || !timeStr.includes(':')) return { minutes: 0, seconds: 0, milliseconds: 0 };
-        const [m, rest] = timeStr.split(':');
-        const [s, ms] = rest.split('.');
-        return { minutes: parseInt(m) || 0, seconds: parseInt(s) || 0, milliseconds: parseInt(ms) || 0 };
-    }
+    function getCurrentEvaluationConfig(type) { return EVAL_CONFIGS[type] || EVAL_CONFIGS['estabilizacao']; }
+    function getStudentNamesFromForm() { return Array.from(document.querySelectorAll('.student-name-input')).map(i => i.value.trim()).filter(v => v); }
+    function getInstructorNamesFromForm() { return Array.from(document.querySelectorAll('.instructor-name-input')).map(i => i.value.trim()).filter(v => v); }
 
     function getFriendlySubtypeName(type, subtype) {
         if (!subtype) return '';
@@ -348,80 +261,21 @@
         return subtype;
     }
 
-    // Função para buscar valor de objeto Supabase de forma flexível
+    function timeStringToObjects(timeStr) {
+        if (!timeStr || !timeStr.includes(':')) return { minutes: 0, seconds: 0, milliseconds: 0 };
+        const parts = timeStr.split(':');
+        const rest = parts[1] || '00.000';
+        const restParts = rest.split('.');
+        return { minutes: parseInt(parts[0]) || 0, seconds: parseInt(restParts[0]) || 0, milliseconds: parseInt(restParts[1]) || 0 };
+    }
+
     function getFlexibleVal(obj, searchKey) {
         if (!obj) return null;
-        const normalize = (s) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
-        const normalizedSearch = normalize(searchKey);
-        const actualKey = Object.keys(obj).find(k => normalize(k) === normalizedSearch);
+        const normSearch = searchKey.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+        const actualKey = Object.keys(obj).find(k => k.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "") === normSearch);
         return actualKey ? obj[actualKey] : null;
     }
 
-    // --- BAREMAS ---
-    const TIME_SCORES_1_5 = [{max:180,s:1.5},{max:190,s:1.4},{max:200,s:1.3},{max:210,s:1.2},{max:220,s:1.1},{max:230,s:1.0},{max:240,s:0.9},{max:250,s:0.8},{max:260,s:0.7},{max:270,s:0.6},{max:280,s:0.5},{max:290,s:0.4},{max:300,s:0.3},{max:310,s:0.2},{max:320,s:0.1},{max:Infinity,s:0.0}];
-    const TIME_SCORES_3_0 = [{max:300,s:3.0},{max:310,s:2.8},{max:320,s:2.6},{max:330,s:2.4},{max:340,s:2.2},{max:350,s:2.0},{max:360,s:1.8},{max:370,s:1.6},{max:380,s:1.4},{max:390,s:1.2},{max:400,s:1.0},{max:410,s:0.8},{max:420,s:0.6},{max:430,s:0.4},{max:440,s:0.2},{max:Infinity,s:0.0}];
-
-    const ESTABILIZACAO_PENALTIES = ["Utilizar calço não previsto na estabilização","Utilizar conjunto de escoras incorretamente","Colocar-se em situação insegura","Qualquer outro procedimento errado","Calço solto ou mal colocado (0,2/cada)"];
-    const COMMON_PENALTIES = ["Não realizar estabilização correta","Não realizar avaliação 360","Não realizar abordagem de frente","Não realizar procedimentos internos","Entrar no veículo antes da estabilização","Não imobilizar vítima corretamente","Retirada fora da técnica 30º","Não colocar O2 / Oxímetro / Colar","Não cobrir a vítima","Procedimento divergente ao ensinado nas aulas"];
-    const CORTE_SUBTYPE_PENALTIES = {
-        'painel': ["01. Abertura da porta (dobradiças)","02. Abertura da porta (fechadura)","03. Corte da coluna A (mediana)","04. Corte de alívio na base coluna A","05. Posicionar apoio extensor","Procedimento incorreto ou não previsto"],
-        'teto': ["01. Corte Coluna A superior","02. Corte Coluna B superior","03. Corte coluna C/D superior","04. Corte vidro dianteiro","05. 2 Cortes alívio teto","Item de barema não previsto"]
-    };
-
-    const EVAL_CONFIGS = {
-        'estabilizacao': { name: 'Prova de Estabilização Veicular', short_name: 'Estabilização', base_score: 1.5, penalties: ESTABILIZACAO_PENALTIES, penalty_deduction: 0.2, is_timed_score: true, is_estabilizacao: true, is_corte: false },
-        'retirada': { name: 'Prova de Retirada de Vítimas', short_name: 'Retirada Vítimas', base_score: 3.0, penalties: COMMON_PENALTIES, penalty_deduction: 0.3, is_timed_score: true, is_estabilizacao: false, is_corte: false },
-        'corte': { name: 'Prova de Técnica de Corte', short_name: 'Técnica Corte', base_score: 2.0, penalties: CORTE_SUBTYPE_PENALTIES, penalty_deduction: 0.1, is_timed_score: false, is_estabilizacao: false, is_corte: true }
-    };
-
-    function getCurrentEvaluationConfig(type) { return EVAL_CONFIGS[type] || EVAL_CONFIGS['estabilizacao']; }
-
-    // --- CONFIGURAÇÃO SUPABASE ---
-    const SUPABASE_URL = 'https://mnpnwmprnantdyqdtfef.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ucG53bXBybmFudGR5cWR0ZmVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYwMDcyOTcsImV4cCI6MjA4MTU4MzI5N30.f0Hg4ovkXmNUoqbC9nrFwhurPjJ9pnwJYYTtH20g-NM';
-    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-    // --- BANCO DE DADOS (SUPABASE) ---
-    async function syncData() {
-        const overlay = document.getElementById('loading-db'); overlay.style.display = 'flex';
-        try {
-            // Sincroniza Alunos Primeiro
-            const { data: dataAlunos, error: errorAlunos } = await _supabase.from('alunos').select('*');
-            if (errorAlunos) throw errorAlunos;
-            cachedAlunos = dataAlunos || [];
-            
-            if (cachedAlunos.length > 0) {
-                console.log("DEBUG: Estrutura da tabela alunos (Keys):", Object.keys(cachedAlunos[0]));
-            }
-
-            // Sincroniza Avaliações
-            const { data: dataEvals, error: errorEvals } = await _supabase.from('avaliacoes').select('*');
-            if (errorEvals) throw errorEvals;
-            cachedEvaluations = dataEvals || [];
-            allStudentsInAllEvaluations = Array.from(new Set(cachedEvaluations.flatMap(e => e.studentnames || []))).sort();
-            
-        } catch (err) { console.error("Sync Erro:", err.message); } 
-        finally { overlay.style.display = 'none'; }
-    }
-
-    async function saveToSupabase(evaluation) {
-        const overlay = document.getElementById('loading-db'); overlay.style.display = 'flex';
-        try {
-            const { error } = await _supabase.from('avaliacoes').upsert(evaluation);
-            if (error) throw error;
-            return true;
-        } catch (err) { alert("ERRO AO SALVAR: " + err.message); return false; } 
-        finally { overlay.style.display = 'none'; }
-    }
-
-    async function deleteFromSupabase(id) {
-        const overlay = document.getElementById('loading-db'); overlay.style.display = 'flex';
-        try { await _supabase.from('avaliacoes').delete().eq('id', id); } 
-        catch (err) { console.error("Erro Delete:", err.message); } 
-        finally { overlay.style.display = 'none'; }
-    }
-
-    // --- INTERFACE ---
     function populateTimeSelectors() {
         const mins = document.getElementById('time-minutes');
         const secs = document.getElementById('time-seconds');
@@ -437,211 +291,107 @@
         }
     }
 
-    function handleTurmaChange() {
-        document.getElementById('students-container').innerHTML = '';
-        studentCount = 0;
-        
-        const selectedTurma = document.getElementById('evaluation-turma').value;
-        const helper = document.getElementById('student-helper-text');
-        
-        if (selectedTurma) {
-            const filtered = cachedAlunos.filter(a => {
-                const dbVal = (getFlexibleVal(a, "Turma") || "").toString().toUpperCase().trim();
-                const uiVal = selectedTurma.toUpperCase().trim();
-                return dbVal === uiVal || dbVal === `TURMA ${uiVal}` || dbVal.replace("ALPHA", "ALFA") === uiVal;
-            });
-            
-            if (filtered.length > 0) {
-                helper.innerHTML = `<span class="text-green-600 font-black">${filtered.length} militares carregados.</span> Clique em "+" para selecionar.`;
-                addStudentInput(); 
-            } else {
-                helper.innerHTML = `<span class="text-red-600 font-black">ERRO: Nenhum aluno da turma ${selectedTurma} encontrado no Supabase.</span>`;
-                addStudentInput(); 
-            }
-        } else {
-            helper.textContent = "Selecione uma turma para carregar o seletor de militares.";
-        }
-    }
-
     function updatePrintData() {
-        const container = document.getElementById('print-data-container');
-        if (!container) return;
-        const students = getStudentNamesFromForm();
-        const instructors = getInstructorNamesFromForm();
+        const container = document.getElementById('print-data-container'); if (!container) return;
+        const studs = getStudentNamesFromForm(); 
         const turma = document.getElementById('evaluation-turma').value;
         const type = document.getElementById('evaluation-type').value;
         const config = getCurrentEvaluationConfig(type);
-        let sub = '';
-        if (config.is_estabilizacao) sub = getFriendlySubtypeName(type, document.getElementById('estabilizacao-subtype-select').value);
-        if (config.is_corte) sub = getFriendlySubtypeName(type, document.getElementById('corte-subtype-select').value);
-        const curTime = {
-            minutes: document.getElementById('time-minutes').value,
-            seconds: document.getElementById('time-seconds').value,
-            milliseconds: document.getElementById('time-milliseconds').value
-        };
-        container.innerHTML = `<h3 class="text-lg font-bold border-b-2 border-primary pb-1 mb-2 uppercase text-primary tracking-widest italic tracking-tighter">Barema CFSd 2025</h3><div class="grid grid-cols-2 gap-x-4 text-[10px] gap-y-1 font-medium italic"><p><b>Prova:</b> ${config.name}</p><p><b>Sub-técnica:</b> ${sub || 'N/A'}</p><p><b>Turma:</b> ${turma || 'N/A'}</p><p><b>Data:</b> ${new Date().toLocaleDateString('pt-BR')}</p><p><b>Tempo:</b> ${config.is_timed_score ? timeObjectToString(curTime) : 'Avaliação Técnica'}</p><p class="col-span-2 border-t mt-1 pt-1 font-bold italic">Militares: ${students.join(', ')}</p><p class="col-span-2"><b>Avaliadores:</b> ${instructors.join(', ')}</p></div>`;
+        const mins = document.getElementById('time-minutes')?.value || 0;
+        const secs = document.getElementById('time-seconds')?.value || 0;
+        const ms = document.getElementById('time-milliseconds')?.value || 0;
+        container.innerHTML = `<h3 class="text-lg font-bold border-b-2 border-primary pb-1 mb-2 uppercase text-primary italic">Avaliação CFSd 2025</h3><div class="grid grid-cols-2 text-[10px] italic font-medium"><p>Prova: ${config.name}</p><p>Turma: ${turma}</p><p>Tempo: ${config.is_timed_score ? timeObjectToString({minutes: mins, seconds: secs, milliseconds: ms}) : 'N/A'}</p><p class="col-span-2">Militares: ${studs.join(', ')}</p></div>`;
     }
 
-    function addStudentInput(name = '') {
-        const container = document.getElementById('students-container');
-        const selectedTurma = document.getElementById('evaluation-turma').value;
-        studentCount++;
-        
-        const div = document.createElement('div');
-        div.className = "flex space-x-2";
-
-        const filteredAlunos = cachedAlunos.filter(a => {
-            const dbVal = (getFlexibleVal(a, "Turma") || "").toString().toUpperCase().trim();
-            const uiVal = selectedTurma.toUpperCase().trim();
-            return dbVal === uiVal || dbVal === `TURMA ${uiVal}` || dbVal.replace("ALPHA", "ALFA") === uiVal;
-        });
-
-        if (selectedTurma && filteredAlunos.length > 0) {
-            let optionsHtml = `<option value="">-- Selecionar Militar --</option>`;
-            filteredAlunos.forEach(a => {
-                const nbm = getFlexibleVal(a, "Nº BM") || getFlexibleVal(a, "n_bm") || getFlexibleVal(a, "nbm") || "S/N";
-                const guerra = getFlexibleVal(a, "Nome de Guerra") || getFlexibleVal(a, "nome_de_guerra") || getFlexibleVal(a, "guerra") || "S/N";
-                const displayText = `${nbm} - Sd 2 Cl ${guerra}`;
-                optionsHtml += `<option value="${displayText}" ${name === displayText ? 'selected' : ''}>${displayText}</option>`;
-            });
-
-            div.innerHTML = `
-                <select required onchange="calculateScores()" class="flex-1 p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-primary student-name-input uppercase text-[10px] font-black tracking-tight bg-white">
-                    ${optionsHtml}
-                </select>
-                <button type="button" onclick="this.parentElement.remove(); if(typeof renderPenaltiesRegistration === 'function') renderPenaltiesRegistration();" class="bg-red-500 text-white w-8 h-8 rounded-lg font-bold hover:bg-red-600 transition shadow-sm">&times;</button>
-            `;
-        } else {
-            div.innerHTML = `
-                <input type="text" value="${name}" required placeholder="NOME DO MILITAR" oninput="calculateScores()" class="flex-1 p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-primary student-name-input uppercase text-xs font-black tracking-tight bg-red-50">
-                <button type="button" onclick="this.parentElement.remove(); if(typeof renderPenaltiesRegistration === 'function') renderPenaltiesRegistration();" class="bg-red-500 text-white w-8 h-8 rounded-lg font-bold hover:bg-red-600 transition shadow-sm">&times;</button>
-            `;
-        }
-
-        container.appendChild(div);
-        if(typeof renderPenaltiesRegistration === 'function' && document.getElementById('evaluation-type').value) {
-             renderPenaltiesRegistration();
-        }
-    }
-
-    function addInstructorInput(name = '') {
-        const container = document.getElementById('instructors-container');
-        instructorCount++;
-        const div = document.createElement('div');
-        div.className = "flex space-x-2";
-        div.innerHTML = `<input type="text" value="${name}" required placeholder="NOME DO INSTRUTOR" class="flex-1 p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-primary instructor-name-input uppercase text-xs font-black tracking-tight"><button type="button" onclick="this.parentElement.remove();" class="bg-red-500 text-white w-8 h-8 rounded-lg font-bold hover:bg-red-600 transition shadow-sm">&times;</button>`;
-        container.appendChild(div);
-    }
-
-    function renderStudentInputs(names) { document.getElementById('students-container').innerHTML = ''; (names?.length ? names : ['']).forEach(n => addStudentInput(n)); }
-    function renderInstructorInputs(names) { document.getElementById('instructors-container').innerHTML = ''; (names?.length ? names : ['']).forEach(n => addInstructorInput(n)); }
-    function getStudentNamesFromForm() { return Array.from(document.querySelectorAll('.student-name-input')).map(i => i.value.trim()).filter(v => v); }
-    function getInstructorNamesFromForm() { return Array.from(document.querySelectorAll('.instructor-name-input')).map(i => i.value.trim()).filter(v => v); }
-
-    // --- CÁLCULOS ---
-    window.getTimeBaseScore = function(seconds) {
-        const type = document.getElementById('evaluation-type').value;
-        const config = getCurrentEvaluationConfig(type);
+    function getTimeBaseScore(seconds) {
+        const typeEl = document.getElementById('evaluation-type');
+        if (!typeEl) return 0;
+        const config = getCurrentEvaluationConfig(typeEl.value);
         if (!config.is_timed_score) return config.base_score;
-        const list = config.is_estabilizacao ? TIME_SCORES_1_5 : TIME_SCORES_3_0;
+        const list = (typeEl.value === 'estabilizacao') ? TIME_SCORES_1_5 : TIME_SCORES_3_0;
         const scoreItem = list.find(t => seconds <= t.max);
         return scoreItem ? scoreItem.s : 0.0;
     }
 
-    window.calculateScores = function() {
+    function calculateScores() {
         const typeEl = document.getElementById('evaluation-type'); if (!typeEl) return { scores: {}, timeStr: "00:00.000" };
         const type = typeEl.value; const config = getCurrentEvaluationConfig(type);
-        const mins = parseInt(document.getElementById('time-minutes').value || 0);
-        const secs = parseInt(document.getElementById('time-seconds').value || 0);
-        const ms = parseInt(document.getElementById('time-milliseconds').value || 0);
+        const mins = parseInt(document.getElementById('time-minutes')?.value || 0);
+        const secs = parseInt(document.getElementById('time-seconds')?.value || 0);
+        const ms = parseInt(document.getElementById('time-milliseconds')?.value || 0);
         const totalSecs = (mins * 60) + secs + (ms / 1000);
-        
-        let baseScore = config.is_timed_score ? getTimeBaseScore(totalSecs) : config.base_score;
-        document.getElementById('base-score').textContent = baseScore.toFixed(1);
-
-        const studs = getStudentNamesFromForm(); const table = document.getElementById('individual-scores-table'); table.innerHTML = ''; const sc = {};
-        
+        let bs = config.is_timed_score ? getTimeBaseScore(totalSecs) : config.base_score;
+        const baseEl = document.getElementById('base-score'); if(baseEl) baseEl.textContent = bs.toFixed(1);
+        const studs = getStudentNamesFromForm(); const table = document.getElementById('individual-scores-table'); if(table) table.innerHTML = ''; const sc = {};
         let totalP = 0; for (const r in studentPenalties) { for (const p in studentPenalties[r]) totalP += studentPenalties[r][p]; }
-        document.getElementById('penalty-count').textContent = totalP;
-
-        const gTotalDed = Object.values(studentPenalties["Grupo"] || {}).reduce((a,b) => a+b, 0);
-
+        const pCnt = document.getElementById('penalty-count'); if(pCnt) pCnt.textContent = totalP;
+        const gDed = Object.values(studentPenalties["Grupo"] || {}).reduce((a,b) => a+b, 0);
         studs.forEach(s => {
-            let pCount = gTotalDed + Object.values(studentPenalties[s] || {}).reduce((a,b) => a+b, 0);
-            let final = Math.max(0, baseScore - (pCount * config.penalty_deduction));
+            let pCount = gDed + Object.values(studentPenalties[s] || {}).reduce((a,b) => a+b, 0);
+            let final = Math.max(0, bs - (pCount * config.penalty_deduction));
             sc[s] = { finalScore: final, penaltyCount: pCount };
-            const cClass = final >= (config.base_score * 0.7) ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200';
-            table.innerHTML += `<div class="flex justify-between p-3 border rounded-lg ${cClass} shadow-sm font-black text-[10px] uppercase"><span>${s}</span><span>${final.toFixed(1)}</span></div>`;
+            if(table) table.innerHTML += `<div class="flex justify-between p-3 border rounded-lg ${final >= (config.base_score * 0.7) ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'} shadow-sm font-black text-[10px] uppercase"><span>${s}</span><span>${final.toFixed(1)}</span></div>`;
         });
         updatePrintData();
         return { scores: sc, timeStr: timeObjectToString({minutes: mins, seconds: secs, milliseconds: ms}) };
     }
 
-    // --- PAINEL GERENCIAL ---
-    window.showDashboardView = async function() {
-        await syncData(); document.getElementById('list-view').style.display = 'none'; document.getElementById('dashboard-view').style.display = 'block';
-        calculateDashboardMetrics();
+    function renderPenaltyItemsList(ev, militar = null) {
+        const config = getCurrentEvaluationConfig(ev.type);
+        let src = config.penalties; if (config.is_corte && ev.subtype) src = config.penalties[ev.subtype];
+        let h = '<ul class="mt-2 space-y-1">'; let content = false; const pens = ev.penalties || {};
+        if (pens["Grupo"]) { 
+            for (const pId in pens["Grupo"]) { 
+                const idx = parseInt(pId.split('-')[1]);
+                const text = Array.isArray(src) ? src[idx] : src[idx];
+                h += `<li class="text-[10px] leading-tight"><span class="font-black text-primary text-[8px] uppercase">[Equipe]</span> ${text || 'Item Barema'} (x${pens["Grupo"][pId]})</li>`; content = true; 
+            } 
+        }
+        if (militar && pens[militar]) { 
+            for (const pId in pens[militar]) { 
+                const idx = parseInt(pId.split('-')[1]);
+                const text = Array.isArray(src) ? src[idx] : src[idx];
+                h += `<li class="text-[10px] leading-tight"><span class="font-black text-indigo-600 text-[8px] uppercase">[Individ.]</span> ${text || 'Item Barema'} (x${pens[militar][pId]})</li>`; content = true; 
+            } 
+        }
+        return content ? h + '</ul>' : '<p class="text-[9px] text-green-600 italic font-bold">Limpo.</p>';
     }
 
-    function calculateDashboardMetrics() {
-        const turmas = {}; const provas = {}; const penaltyFreq = {}; const milSet = new Set(); const instSet = new Set();
-        let passCount = 0; let totalE = 0;
-
-        cachedEvaluations.forEach(ev => {
-            const config = getCurrentEvaluationConfig(ev.type);
-            if (!turmas[ev.turma]) turmas[ev.turma] = { earned: 0, possible: 0 };
-            if (!provas[ev.type]) provas[ev.type] = { sum: 0, count: 0 };
-            (ev.instructornames || []).forEach(i => instSet.add(i));
-
-            for (const name in ev.individualscores) {
-                const score = ev.individualscores[name].finalScore;
-                milSet.add(name);
-                turmas[ev.turma].earned += score; turmas[ev.turma].possible += config.base_score;
-                provas[ev.type].sum += score; provas[ev.type].count++;
-                if (score >= (config.base_score * 0.7)) passCount++;
-                totalE++;
-            }
-
-            let src = config.penalties; if (config.is_corte && ev.subtype) src = config.penalties[ev.subtype];
-            for (const resp in ev.penalties) {
-                for (const pId in ev.penalties[resp]) {
-                    const idx = parseInt(pId.split('-')[1]);
-                    const key = `${config.short_name}: ${src[idx] || "Barema"}`;
-                    penaltyFreq[key] = (penaltyFreq[key] || 0) + ev.penalties[resp][pId];
-                }
-            }
-        });
-
-        document.getElementById('dash-turma-stats').innerHTML = Object.keys(turmas).sort().map(t => {
-            const perc = turmas[t].possible > 0 ? (turmas[t].earned / turmas[t].possible) * 100 : 0;
-            return `<div><div class="flex justify-between text-[10px] font-black uppercase mb-1"><span>${t}</span><span class="text-indigo-600 font-black">${perc.toFixed(1)}%</span></div><div class="w-full bg-gray-100 h-2 rounded-full"><div class="bg-indigo-500 h-full transition-all duration-500" style="width: ${Math.min(perc, 100)}%"></div></div></div>`;
-        }).join('') || '<p class="text-[10px] text-gray-400">Sem dados.</p>';
-
-        document.getElementById('dash-prova-stats').innerHTML = Object.keys(provas).map(p => {
-            const avg = (provas[p].sum / provas[p].count).toFixed(1);
-            return `<div class="flex justify-between items-center bg-gray-50 p-2 rounded border shadow-sm"><span class="text-[10px] font-black uppercase text-gray-500">${getCurrentEvaluationConfig(p).short_name}</span><span class="text-sm font-black text-primary">${avg}</span></div>`;
-        }).join('') || '<p class="text-[10px] text-gray-400">Sem dados.</p>';
-
-        document.getElementById('dash-penalty-stats').innerHTML = Object.entries(penaltyFreq).sort((a,b) => b[1] - a[1]).slice(0, 10).map(([name, count]) => `<div class="flex justify-between items-center text-[10px] border-b pb-1"><span>${name}</span><span class="font-black text-primary bg-red-50 px-2 rounded-full">${count}x</span></div>`).join('') || 'Sem erros registrados.';
-
-        document.getElementById('dash-total-evals').textContent = cachedEvaluations.length;
-        document.getElementById('dash-total-militares').textContent = milSet.size;
-        document.getElementById('dash-total-instructors').textContent = instSet.size;
-        document.getElementById('dash-pass-rate').textContent = totalE > 0 ? Math.round((passCount / totalE) * 100) + '%' : '0%';
+    async function deleteFromSupabase(id) {
+        const overlay = document.getElementById('loading-db');
+        if (overlay) overlay.style.display = 'flex';
+        try {
+            const { error } = await supabaseClient.from('avaliacoes').delete().eq('id', id);
+            if (error) throw error;
+        } catch (err) {
+            console.error("Erro ao excluir:", err.message);
+        } finally {
+            if (overlay) overlay.style.display = 'none';
+        }
     }
 
-    // --- PENALIDADES & LOGICA FORM ---
-    window.applyPenalty = function(pId) {
-        const resp = document.getElementById(`select-${pId}`).value; if (!resp) return;
+    function applyPenalty(pId) {
+        const sel = document.getElementById(`select-${pId}`);
+        if (!sel || !sel.value) return;
+        const resp = sel.value;
         if (!studentPenalties[resp]) studentPenalties[resp] = {};
         studentPenalties[resp][pId] = (studentPenalties[resp][pId] || 0) + 1;
         calculateScores(); renderPenaltyBreakdown();
     }
-    window.removePenalty = function(n, pId) { if (studentPenalties[n]?.[pId] > 0) { studentPenalties[n][pId]--; if (studentPenalties[n][pId] === 0) delete studentPenalties[n][pId]; calculateScores(); renderPenaltyBreakdown(); } }
-    
+
+    function removePenalty(n, pId) {
+        if (studentPenalties[n]?.[pId] > 0) {
+            studentPenalties[n][pId]--;
+            if (studentPenalties[n][pId] === 0) delete studentPenalties[n][pId];
+            calculateScores(); renderPenaltyBreakdown();
+        }
+    }
+
     function renderPenaltyBreakdown() {
-        const el = document.getElementById('penalty-breakdown'); el.innerHTML = '';
-        const type = document.getElementById('evaluation-type').value; const config = getCurrentEvaluationConfig(type);
+        const el = document.getElementById('penalty-breakdown'); if (!el) return;
+        el.innerHTML = '';
+        const type = document.getElementById('evaluation-type').value; 
+        const config = getCurrentEvaluationConfig(type);
         let src = config.penalties; if (config.is_corte) src = config.penalties[document.getElementById('corte-subtype-select').value];
         Object.keys(studentPenalties).forEach(name => {
             const isG = name === "Grupo"; const cClass = isG ? "text-primary bg-primary/5" : "text-indigo-700 bg-indigo-50/50";
@@ -649,7 +399,9 @@
             let has = false;
             Object.keys(studentPenalties[name]).forEach(pId => {
                 if (studentPenalties[name][pId] > 0) {
-                    h += `<li class="flex justify-between text-[10px] items-center">${src[parseInt(pId.split('-')[1])]} <span class="font-black ml-2 text-gray-400">x${studentPenalties[name][pId]}</span> <button type="button" onclick="removePenalty('${name}', '${pId}')" class="bg-red-500 text-white px-2 ml-2 rounded no-print font-black shadow-sm transform hover:scale-110">X</button></li>`;
+                    const idx = parseInt(pId.split('-')[1]);
+                    const text = Array.isArray(src) ? src[idx] : 'Item';
+                    h += `<li class="flex justify-between text-[10px] items-center leading-tight">${text} <span class="font-black ml-2 text-gray-400">x${studentPenalties[name][pId]}</span> <button type="button" onclick="removePenalty('${name}', '${pId}')" class="bg-red-500 text-white px-2 ml-2 rounded no-print font-black shadow-sm">X</button></li>`;
                     has = true;
                 }
             });
@@ -657,113 +409,211 @@
         });
     }
 
-    window.renderPenaltiesRegistration = function() {
+    function renderPenaltiesRegistration() {
         const cont = document.getElementById('penalties-registration-list'); if(!cont) return;
         const studs = getStudentNamesFromForm();
         const type = document.getElementById('evaluation-type').value || 'estabilizacao';
         const config = getCurrentEvaluationConfig(type);
-        
-        let list = [];
-        if (config.is_corte) {
-            const sub = document.getElementById('corte-subtype-select').value || 'painel';
-            list = config.penalties[sub] || [];
-        } else {
-            list = Array.isArray(config.penalties) ? config.penalties : [];
-        }
-
+        let list = config.is_corte ? config.penalties[document.getElementById('corte-subtype-select').value] : config.penalties;
         if (!Array.isArray(list)) list = [];
         
-        cont.innerHTML = list.map((n, i) => `<div class="border-b pb-2"><p class="text-[11px] font-bold text-gray-700 mb-1 leading-tight">${n}</p><div class="flex space-x-2"><select id="select-p-${i}" class="flex-1 p-1 text-[10px] border rounded shadow-sm bg-white"><option value="">-- Responsável --</option><option value="Grupo" class="font-bold text-primary italic tracking-tight uppercase">EQUIPE INTEIRA</option>${studs.map(s => `<option value="${s}">${s}</option>`).join('')}</select><button type="button" onclick="applyPenalty('p-${i}')" class="bg-primary text-white px-4 py-1 rounded text-xs font-black shadow-sm transition hover:bg-red-700">+</button></div></div>`).join('');
+        cont.innerHTML = list.map((n, i) => `
+            <div class="border-b pb-2">
+                <p class="text-[11px] font-bold text-gray-700 leading-tight">${n}</p>
+                <div class="flex space-x-2 mt-1">
+                    <select id="select-p-${i}" class="flex-1 p-1 text-[10px] border rounded bg-white">
+                        <option value="">-- Resp --</option>
+                        <option value="Grupo" class="font-bold text-primary italic uppercase">EQUIPE</option>
+                        ${studs.map(s => `<option value="${s}">${s}</option>`).join('')}
+                    </select>
+                    <button type="button" onclick="applyPenalty('p-${i}')" class="bg-primary text-white px-4 py-1 rounded text-xs font-black shadow-sm transition hover:scale-105">+</button>
+                </div>
+            </div>`).join('');
         calculateScores();
     }
 
-    function renderPenaltyItemsList(ev, militar = null) {
-        const config = getCurrentEvaluationConfig(ev.type);
-        let src = config.penalties; if (config.is_corte && ev.subtype) src = config.penalties[ev.subtype];
-        let h = '<ul class="mt-2 space-y-1">'; let content = false; const pens = ev.penalties || {};
-        if (pens["Grupo"]) { for (const pId in pens["Grupo"]) { h += `<li class="text-[10px]"><span class="font-black text-primary text-[8px] uppercase">[Equipe]</span> ${src[parseInt(pId.split('-')[1])]} (x${pens["Grupo"][pId]})</li>`; content = true; } }
-        if (militar && pens[militar]) { for (const pId in pens[militar]) { h += `<li class="text-[10px]"><span class="font-black text-indigo-600 text-[8px] uppercase">[Individual]</span> ${src[parseInt(pId.split('-')[1])]} (x${pens[militar][pId]})</li>`; content = true; } }
-        else if (!militar) { for (const r in pens) { if (r === "Grupo") continue; for (const pId in pens[r]) { h += `<li class="text-[10px]"><span class="font-black text-indigo-600 text-[8px] uppercase">[${r}]</span> ${src[parseInt(pId.split('-')[1])]} (x${pens[r][pId]})</li>`; content = true; } } }
-        return content ? h + '</ul>' : '<p class="text-[9px] text-green-600 italic font-bold">Desempenho limpo.</p>';
+    function addStudentInput(name = '') {
+        const container = document.getElementById('students-container'); if (!container) return;
+        const selectedTurma = document.getElementById('evaluation-turma').value;
+        const div = document.createElement('div'); div.className = "flex space-x-2";
+        const filtered = cachedAlunos.filter(a => {
+            const dbVal = (getFlexibleVal(a, "Turma") || "").toString().toUpperCase().trim();
+            return dbVal === selectedTurma || dbVal === `TURMA ${selectedTurma}`;
+        });
+        if (selectedTurma && filtered.length > 0) {
+            let opts = `<option value="">-- Selecionar Militar --</option>`;
+            filtered.forEach(a => {
+                const guerra = getFlexibleVal(a, "Nome de Guerra") || "Sd";
+                const nbm = getFlexibleVal(a, "Nº BM") || "S/N";
+                const text = `${nbm} - Sd 2 Cl ${guerra}`;
+                opts += `<option value="${text}" ${name === text ? 'selected' : ''}>${text}</option>`;
+            });
+            div.innerHTML = `<select required onchange="renderPenaltiesRegistration()" class="flex-1 p-2 border border-gray-300 rounded-lg student-name-input uppercase text-[10px] font-black bg-white shadow-inner">${opts}</select><button type="button" onclick="this.parentElement.remove(); renderPenaltiesRegistration();" class="bg-red-500 text-white w-8 h-8 rounded-lg font-bold">✕</button>`;
+        } else {
+            div.innerHTML = `<input type="text" value="${name}" required placeholder="NOME MANUAL" oninput="renderPenaltiesRegistration()" class="flex-1 p-2 border border-gray-300 rounded-lg student-name-input uppercase text-xs font-black shadow-inner"><button type="button" onclick="this.parentElement.remove(); renderPenaltiesRegistration();" class="bg-red-500 text-white w-8 h-8 rounded-lg font-bold">✕</button>`;
+        }
+        container.appendChild(div);
+        renderPenaltiesRegistration();
     }
 
-    window.showReportView = async (type) => {
-        await syncData(); document.getElementById('form-view').style.display = 'none'; document.getElementById('list-view').style.display = 'none'; document.getElementById('dashboard-view').style.display = 'none'; document.getElementById('report-view').style.display = 'block';
-        const output = document.getElementById('student-report-output'); output.innerHTML = '';
-        if (type === 'individual') {
-            document.getElementById('report-title').textContent = 'Relatório Individual';
-            document.getElementById('report-selection-container').innerHTML = `<select id="rep-stud" onchange="generateStudentReport()" class="w-full p-3 border rounded shadow-sm mb-4 font-bold text-gray-700 bg-white"><option value="">-- Selecione o Militar --</option>${allStudentsInAllEvaluations.map(s => `<option value="${s}">${s}</option>`).join('')}</select><button onclick="window.print()" class="w-full py-3 bg-blue-500 text-white rounded font-black uppercase text-xs shadow-md">Imprimir Extrato</button>`;
-        } else {
-            document.getElementById('report-title').textContent = 'Quadro Geral CFSd 2025';
-            document.getElementById('report-selection-container').innerHTML = `<button onclick="generateGlobalReport()" class="w-full py-4 bg-indigo-600 text-white rounded font-black uppercase text-xs mb-4 shadow-md">Gerar Quadro de Notas</button><button onclick="window.print()" class="w-full py-3 bg-blue-500 text-white rounded font-black uppercase text-xs shadow-md">Imprimir PDF</button>`;
+    function addInstructorInput(name = '') {
+        const container = document.getElementById('instructors-container'); if (!container) return;
+        const div = document.createElement('div'); div.className = "flex space-x-2";
+        div.innerHTML = `<input type="text" value="${name}" required placeholder="INSTRUTOR" class="flex-1 p-2 border border-gray-300 rounded-lg instructor-name-input uppercase text-xs font-black shadow-inner"><button type="button" onclick="this.parentElement.remove();" class="bg-red-500 text-white w-8 h-8 rounded-lg font-bold">✕</button>`;
+        container.appendChild(div);
+    }
+
+    function handleTurmaChange() {
+        const cont = document.getElementById('students-container'); if(cont) cont.innerHTML = '';
+        const selectedTurma = document.getElementById('evaluation-turma').value;
+        const helper = document.getElementById('student-helper-text');
+        if (selectedTurma) {
+            const filtered = cachedAlunos.filter(a => {
+                const dbVal = (getFlexibleVal(a, "Turma") || "").toString().toUpperCase().trim();
+                return dbVal === selectedTurma || dbVal === `TURMA ${selectedTurma}`;
+            });
+            if (filtered.length > 0) { if(helper) helper.innerHTML = `<span class="text-green-600 font-bold uppercase text-[9px]">${filtered.length} militares carregados.</span>`; addStudentInput(); }
+            else { if(helper) helper.innerHTML = `<span class="text-red-500 font-bold uppercase text-[9px]">Offline / Cache vazio.</span>`; addStudentInput(); }
         }
     }
 
-    window.generateGlobalReport = () => {
-        const sc = {}; cachedEvaluations.forEach(e => { for (const n in e.individualscores) { if (!sc[n]) sc[n] = { t: 0, d: [] }; sc[n].t += e.individualscores[n].finalScore; sc[n].d.push(e); }});
-        let h = '<div class="space-y-4">';
-        Object.keys(sc).sort().forEach(n => {
-            const sn = n.replace(/'/g, "\\'");
-            h += `<div class="border rounded bg-white shadow-sm"><div class="flex justify-between items-center p-4 bg-gray-50 border-b"><span class="font-bold text-sm uppercase tracking-tight">${n}</span><div class="flex items-center space-x-4"><span class="text-2xl font-black text-indigo-600">${sc[n].t.toFixed(1)}</span><button onclick="toggleGlobalDetails('${sn}')" class="p-2 bg-gray-200 rounded-full no-print">▼</button></div></div><div id="det-${sn}" class="detail-row p-4 space-y-3">`;
-            sc[n].d.forEach(ev => {
-                const sub = getFriendlySubtypeName(ev.type, ev.subtype);
-                h += `<div class="p-3 border rounded bg-white shadow-inner"><p class="font-bold text-indigo-800 text-[9px] uppercase border-b pb-1 mb-1">${getCurrentEvaluationConfig(ev.type).name} ${sub ? `- ${sub}` : ''} | ${ev.turma || 'N/A'}</p><p class="text-[10px]"><b>Nota:</b> ${ev.individualscores[n].finalScore.toFixed(1)} | <b>Tempo:</b> ${ev.time}</p><div class="bg-gray-50 p-2 mt-2 rounded border">${renderPenaltyItemsList(ev, n)}</div><p class="text-[8px] text-gray-400 mt-2 italic text-right font-bold uppercase tracking-tight">Avaliadores: ${ev.instructornames?.join(', ')}</p></div>`;
+    function calculateDashboardMetrics() {
+        const turmas = {}; const milSet = new Set(); const provas = {}; const penaltiesAgg = {};
+        let passCount = 0; let totalPossibleItems = 0;
+        cachedEvaluations.forEach(ev => {
+            const config = getCurrentEvaluationConfig(ev.type);
+            (ev.studentnames || []).forEach(n => milSet.add(n));
+            if (!turmas[ev.turma]) turmas[ev.turma] = { earned: 0, possible: 0 };
+            if (!provas[ev.type]) provas[ev.type] = { sum: 0, count: 0 };
+            for (const name in ev.individualscores) {
+                const score = ev.individualscores[name].finalScore;
+                turmas[ev.turma].earned += score; turmas[ev.turma].possible += config.base_score;
+                provas[ev.type].sum += score; provas[ev.type].count++;
+                if (score >= (config.base_score * 0.7)) passCount++;
+                totalPossibleItems++;
+            }
+            let src = config.penalties; if (config.is_corte && ev.subtype) src = config.penalties[ev.subtype];
+            const pens = ev.penalties || {};
+            for (const resp in pens) {
+                for (const pId in pens[resp]) {
+                    const idx = parseInt(pId.split('-')[1]);
+                    const text = Array.isArray(src) ? src[idx] : 'Item';
+                    const key = `[${config.short_name}] ${text}`;
+                    penaltiesAgg[key] = (penaltiesAgg[key] || 0) + pens[resp][pId];
+                }
+            }
+        });
+        const tStats = document.getElementById('dash-turma-stats');
+        if (tStats) {
+            tStats.innerHTML = Object.keys(turmas).sort().map(t => {
+                const perc = turmas[t].possible > 0 ? (turmas[t].earned / turmas[t].possible) * 100 : 0;
+                return `<div><div class="flex justify-between text-[10px] font-black uppercase mb-1"><span>${t}</span><span class="text-indigo-600 font-black">${perc.toFixed(1)}%</span></div><div class="w-full bg-gray-100 h-2 rounded-full"><div class="bg-indigo-500 h-full transition-all duration-500" style="width: ${Math.min(perc, 100)}%"></div></div></div>`;
+            }).join('') || '<p class="text-[10px] text-gray-400">Sem dados.</p>';
+        }
+        const pStats = document.getElementById('dash-prova-stats');
+        if (pStats) {
+            pStats.innerHTML = Object.keys(provas).map(type => {
+                const avg = (provas[type].sum / provas[type].count).toFixed(2);
+                return `<div class="bg-gray-50 p-3 rounded border text-center"><p class="text-[9px] font-black text-gray-400 uppercase mb-1">${getCurrentEvaluationConfig(type).short_name}</p><p class="text-xl font-black text-primary">${avg}</p></div>`;
+            }).join('') || '<p class="text-[10px] text-gray-400">Sem dados.</p>';
+        }
+        const penStats = document.getElementById('dash-penalty-stats');
+        if (penStats) {
+            penStats.innerHTML = Object.entries(penaltiesAgg).sort((a,b) => b[1] - a[1]).slice(0, 10).map(([name, count]) => `<div class="flex justify-between items-center text-[10px] border-b pb-1"><span>${name}</span><span class="font-black text-primary bg-red-50 px-2 rounded-full">${count}x</span></div>`).join('') || '<p class="text-[10px] text-gray-400">Sem ocorrências.</p>';
+        }
+        const elE = document.getElementById('dash-total-evals'); if(elE) elE.textContent = cachedEvaluations.length;
+        const elM = document.getElementById('dash-total-militares'); if(elM) elM.textContent = milSet.size;
+        const elP = document.getElementById('dash-pass-rate'); if(elP) elP.textContent = totalPossibleItems > 0 ? Math.round((passCount / totalPossibleItems) * 100) + '%' : '0%';
+    }
+
+    // --- 4. MAPEAMENTO WINDOW FINAL ---
+    window.applyPenalty = applyPenalty;
+    window.removePenalty = removePenalty;
+    window.renderPenaltiesRegistration = renderPenaltiesRegistration;
+    window.calculateScores = calculateScores;
+    window.addStudentInput = addStudentInput;
+    window.addInstructorInput = addInstructorInput;
+    window.updatePrintData = updatePrintData;
+    window.handleTurmaChange = handleTurmaChange;
+    window.getFriendlySubtypeName = getFriendlySubtypeName;
+    window.getTimeBaseScore = getTimeBaseScore;
+    window.getCurrentEvaluationConfig = getCurrentEvaluationConfig;
+    window.renderPenaltyItemsList = renderPenaltyItemsList;
+    window.populateTimeSelectors = populateTimeSelectors;
+
+    window.deleteEvaluationInList = function(id) {
+        if (confirm('Deseja excluir esta avaliação permanentemente?')) {
+            deleteFromSupabase(id).then(() => {
+                syncData().then(() => renderEvaluationsList());
             });
-            h += '</div></div>';
-        });
-        document.getElementById('student-report-output').innerHTML = h + '</div>';
+        }
+    };
+
+    // --- 5. NAVEGAÇÃO E DB ENGINE ---
+
+    async function syncData() {
+        const overlay = document.getElementById('loading-db'); if (navigator.onLine) overlay.style.display = 'flex';
+        try {
+            const { data: dAlunos, error: eAlunos } = await supabaseClient.from('alunos').select('*');
+            if (!eAlunos && dAlunos) { cachedAlunos = dAlunos; localStorage.setItem(LOCAL_ALUNOS_KEY, JSON.stringify(dAlunos)); } 
+            else { const local = localStorage.getItem(LOCAL_ALUNOS_KEY); if (local) cachedAlunos = JSON.parse(local); }
+            const { data: dEvals, error: eEvals } = await supabaseClient.from('avaliacoes').select('*');
+            if (!eEvals) cachedEvaluations = dEvals || [];
+            allStudentsInAllEvaluations = Array.from(new Set(cachedEvaluations.flatMap(e => e.studentnames || []))).sort();
+            updateSyncStatus();
+        } catch (err) { const local = localStorage.getItem(LOCAL_ALUNOS_KEY); if (local) cachedAlunos = JSON.parse(local); } finally { overlay.style.display = 'none'; }
     }
 
-    window.toggleGlobalDetails = (id) => { const el = document.getElementById(`det-${id}`); if(el) el.classList.toggle('open'); }
-
-    window.generateStudentReport = () => {
-        const n = document.getElementById('rep-stud').value; if (!n) return;
-        const evs = cachedEvaluations.filter(e => e.studentnames.includes(n));
-        let sum = 0; let h = `<h3 class="font-black text-center border-b pb-3 mb-4 uppercase text-gray-700 tracking-widest">Extrato de Desempenho: ${n}</h3><div class="space-y-4">`;
-        evs.sort((a, b) => new Date(b.updatedat) - new Date(a.updatedat)).forEach(ev => {
-            const score = ev.individualscores[n].finalScore; sum += score; const sub = getFriendlySubtypeName(ev.type, ev.subtype);
-            h += `<div class="p-4 border rounded-xl bg-gray-50 shadow-sm"><div class="flex justify-between mb-2 text-xs uppercase font-black tracking-tighter"><span>${getCurrentEvaluationConfig(ev.type).name} ${sub ? `- ${sub}` : ''}</span><span class="text-gray-400">${ev.turma || ''} | ${new Date(ev.updatedat).toLocaleDateString()}</span></div><div class="grid grid-cols-2 text-xs font-bold"><div><p class="text-[8px] text-gray-400 uppercase tracking-widest">Tempo Registrado</p><p class="font-mono text-lg">${ev.time}</p></div><div class="text-right"><p class="text-[8px] text-gray-400 uppercase tracking-widest">Nota Alcançada</p><p class="text-2xl font-black text-primary">${score.toFixed(1)}</p></div></div><div class="mt-3 pt-2 border-t">${renderPenaltyItemsList(ev, n)}</div><div class="text-[9px] text-gray-400 mt-3 italic text-right font-bold uppercase tracking-tight">Avaliadores: ${ev.instructornames?.join(', ')}</div></div>`;
-        });
-        document.getElementById('student-report-output').innerHTML = `<div class="bg-indigo-600 text-white p-6 rounded-2xl text-center mb-6 shadow-lg border-b-4 border-indigo-900"><p class="text-xs uppercase font-bold opacity-80 mb-1 tracking-widest tracking-[0.2em]">Pontuação Acumulada</p><p class="text-5xl font-black">${sum.toFixed(1)} <span class="text-xl font-normal opacity-70">pts</span></p></div>${h}</div>`;
+    function updateSyncStatus() {
+        const pending = JSON.parse(localStorage.getItem(PENDING_SYNC_KEY) || "[]");
+        const bar = document.getElementById('sync-status-bar');
+        if (pending.length > 0) { bar.classList.remove('hidden'); document.getElementById('pending-count').textContent = pending.length; } else { bar.classList.add('hidden'); }
     }
 
-    // --- NAVEGAÇÃO ---
-    window.showList = async () => { await syncData(); document.getElementById('form-view').style.display = 'none'; document.getElementById('report-view').style.display = 'none'; document.getElementById('dashboard-view').style.display = 'none'; document.getElementById('list-view').style.display = 'block'; renderEvaluationsList(); }
-    
-    window.showForm = (id = null) => {
+    async function processPendingSync() {
+        if (!navigator.onLine) return;
+        const pending = JSON.parse(localStorage.getItem(PENDING_SYNC_KEY) || "[]"); if (pending.length === 0) return;
+        const remaining = [];
+        for (const item of pending) { try { await supabaseClient.from('avaliacoes').upsert(item); } catch (e) { remaining.push(item); } }
+        localStorage.setItem(PENDING_SYNC_KEY, JSON.stringify(remaining)); updateSyncStatus(); if (remaining.length === 0) syncData();
+    }
+
+    async function saveEvaluation(evalData) {
+        if (navigator.onLine) {
+            const overlay = document.getElementById('loading-db'); overlay.style.display = 'flex';
+            try { await supabaseClient.from('avaliacoes').upsert(evalData); return true; } catch (err) { console.warn("Offline."); } finally { overlay.style.display = 'none'; }
+        }
+        const pending = JSON.parse(localStorage.getItem(PENDING_SYNC_KEY) || "[]");
+        const idx = pending.findIndex(p => p.id === evalData.id);
+        if (idx > -1) pending[idx] = evalData; else pending.push(evalData);
+        localStorage.setItem(PENDING_SYNC_KEY, JSON.stringify(pending)); return true;
+    }
+
+    window.showList = function() { syncData().then(() => { document.getElementById('form-view').style.display = 'none'; document.getElementById('report-view').style.display = 'none'; document.getElementById('dashboard-view').style.display = 'none'; document.getElementById('list-view').style.display = 'block'; renderEvaluationsList(); }); }
+    window.showDashboardView = function() { syncData().then(() => { document.getElementById('list-view').style.display = 'none'; document.getElementById('dashboard-view').style.display = 'block'; calculateDashboardMetrics(); }); }
+
+    window.showForm = function(id = null) {
         const ev = id ? cachedEvaluations.find(e => e.id === id) : null;
         const typeSelect = document.getElementById('evaluation-type-select');
         const type = ev ? ev.type : typeSelect.value;
         const config = getCurrentEvaluationConfig(type);
-        
         document.getElementById('evaluation-type').value = type;
-        document.getElementById('form-title').textContent = ev ? `Editar Avaliação: ${config.short_name}` : `Nova Avaliação: ${config.short_name}`;
         document.getElementById('evaluation-id').value = ev?.id || '';
         document.getElementById('estabilizacao-subtype-container').style.display = config.is_estabilizacao ? 'block' : 'none';
         document.getElementById('corte-subtype-container').style.display = config.is_corte ? 'block' : 'none';
-        document.getElementById('time-selector-container').style.display = config.is_timed_score ? 'block' : 'none';
         document.getElementById('evaluation-turma').value = ev?.turma || '';
-        
         studentPenalties = ev?.penalties || {}; 
-        
-        renderStudentInputs(ev?.studentnames); 
-        renderInstructorInputs(ev?.instructornames);
-        
-        if (config.is_estabilizacao) document.getElementById('estabilizacao-subtype-select').value = ev?.subtype || '4rodas';
-        if (config.is_corte) document.getElementById('corte-subtype-select').value = ev?.subtype || 'painel';
-
+        document.getElementById('students-container').innerHTML = '';
+        (ev?.studentnames || ['']).forEach(n => addStudentInput(n));
+        document.getElementById('instructors-container').innerHTML = '';
+        (ev?.instructornames || ['']).forEach(n => addInstructorInput(n));
         const t = timeStringToObjects(ev?.time || '00:00.000');
-        document.getElementById('time-minutes').value = t.minutes; 
-        document.getElementById('time-seconds').value = t.seconds; 
-        document.getElementById('time-milliseconds').value = t.milliseconds;
-
-        document.getElementById('list-view').style.display = 'none';
-        document.getElementById('form-view').style.display = 'block';
-        
+        document.getElementById('time-minutes').value = t.minutes; document.getElementById('time-seconds').value = t.seconds; document.getElementById('time-milliseconds').value = t.milliseconds;
+        document.getElementById('list-view').style.display = 'none'; document.getElementById('form-view').style.display = 'block';
         renderPenaltiesRegistration(); renderPenaltyBreakdown();
     }
 
-    window.renderEvaluationsList = () => {
+    function renderEvaluationsList() {
         const typeSelect = document.getElementById('evaluation-type-select'); if (!typeSelect) return;
         const evs = cachedEvaluations.filter(e => (e.type || 'estabilizacao') === typeSelect.value);
         const container = document.getElementById('evaluations-list'); container.innerHTML = '';
@@ -771,31 +621,129 @@
         document.getElementById('list-empty').style.display = 'none';
         evs.sort((a,b) => new Date(b.updatedat) - new Date(a.updatedat)).forEach(ev => {
             const vals = Object.values(ev.individualscores || {}).map(s => s.finalScore);
-            const min = vals.length ? Math.min(...vals).toFixed(1) : "0.0"; const max = vals.length ? Math.max(...vals).toFixed(1) : "0.0";
-            const range = min === max ? min : `${min} - ${max}`;
-            container.innerHTML += `<div class="p-4 border border-gray-200 rounded-xl bg-white flex justify-between items-center shadow-sm hover:border-primary/30 transition"><div class="flex-1 pr-4"><p class="text-[10px] text-primary font-black uppercase mb-1 tracking-tighter">${getFriendlySubtypeName(ev.type, ev.subtype) || 'Geral'} • ${ev.turma || 'S/T'}</p><p class="font-black text-gray-800 text-sm uppercase leading-tight tracking-tight">${ev.studentnames[0]}${ev.studentnames.length > 1 ? ' + Equipe' : ''}</p><p class="text-[9px] text-gray-400 mt-2 font-bold uppercase tracking-widest font-black">Aval: ${ev.instructornames?.[0] || 'N/A'}</p></div><div class="flex items-center space-x-3"><div class="text-right"><p class="text-[8px] uppercase font-black text-gray-400 tracking-tighter">Nota(s)</p><span class="text-lg font-black text-indigo-600 tracking-tighter font-black">${range}</span></div><div class="flex flex-col space-y-1"><button onclick='showForm("${ev.id}")' class="p-2 bg-gray-100 text-gray-600 rounded-lg shadow-sm hover:bg-secondary hover:text-white transition">✎</button><button onclick='deleteEvaluationInList("${ev.id}")' class="p-2 bg-gray-100 text-gray-400 rounded-lg hover:bg-red-500 hover:text-white transition">✕</button></div></div></div>`;
+            const range = vals.length ? (Math.min(...vals).toFixed(1) === Math.max(...vals).toFixed(1) ? Math.min(...vals).toFixed(1) : `${Math.min(...vals).toFixed(1)} - ${Math.max(...vals).toFixed(1)}`) : '0.0';
+            container.innerHTML += `
+                <div class="p-4 border rounded-xl bg-white flex justify-between items-center shadow-sm">
+                    <div class="flex-1 pr-4">
+                        <p class="text-[10px] text-primary font-black uppercase mb-1">${getFriendlySubtypeName(ev.type, ev.subtype) || 'Geral'} • ${ev.turma || 'S/T'}</p>
+                        <p class="font-black text-gray-800 text-sm uppercase">${ev.studentnames[0]}${ev.studentnames.length > 1 ? ' + equipe' : ''}</p>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <div class="text-right">
+                            <p class="text-[8px] uppercase font-black text-gray-400">Nota(s)</p>
+                            <span class="text-lg font-black text-indigo-600">${range}</span>
+                        </div>
+                        <div class="flex gap-1">
+                            <button onclick='showForm("${ev.id}")' class="p-2 bg-gray-100 text-gray-600 rounded-lg shadow-sm hover:bg-secondary hover:text-white transition">✎</button>
+                            <button onclick='deleteEvaluationInList("${ev.id}")' class="p-2 bg-gray-100 text-red-400 rounded-lg shadow-sm hover:bg-primary hover:text-white transition">✕</button>
+                        </div>
+                    </div>
+                </div>`;
         });
     }
 
-    document.getElementById('evaluation-form').onsubmit = async (e) => {
-        e.preventDefault(); const data = calculateScores(); const type = document.getElementById('evaluation-type').value; const config = getCurrentEvaluationConfig(type);
-        let sub = undefined; if (config.is_corte) sub = document.getElementById('corte-subtype-select').value; if (config.is_estabilizacao) sub = document.getElementById('estabilizacao-subtype-select').value;
-        const cleanedPenalties = {}; for (const resp in studentPenalties) { if (Object.keys(studentPenalties[resp]).length > 0) cleanedPenalties[resp] = studentPenalties[resp]; }
-        const evalData = { id: document.getElementById('evaluation-id').value || generateId(), type, subtype: sub, turma: document.getElementById('evaluation-turma').value, studentnames: getStudentNamesFromForm(), instructornames: getInstructorNamesFromForm(), time: config.is_timed_score ? data.timeStr : "N/A", penalties: cleanedPenalties, individualscores: data.scores, updatedat: new Date().toISOString() };
-        if (await saveToSupabase(evalData)) showList();
+    window.showReportView = function(type) {
+        syncData().then(() => {
+            document.getElementById('form-view').style.display = 'none'; document.getElementById('list-view').style.display = 'none'; document.getElementById('dashboard-view').style.display = 'none'; document.getElementById('report-view').style.display = 'block';
+            const output = document.getElementById('student-report-output'); output.innerHTML = '';
+            const selCont = document.getElementById('report-selection-container');
+            if (type === 'individual') {
+                document.getElementById('report-title').textContent = 'Ficha de Desempenho';
+                selCont.innerHTML = `<select id="rep-stud" onchange="generateStudentReport()" class="w-full p-3 border rounded shadow-sm font-bold text-gray-700 bg-white"><option value="">-- Selecione o Militar --</option>${allStudentsInAllEvaluations.map(s => `<option value="${s}">${s}</option>`).join('')}</select>`;
+            } else {
+                document.getElementById('report-title').textContent = 'Quadro Geral de Notas';
+                let turmaOptions = `<option value="TODAS">TODAS AS TURMAS</option>`;
+                TURMAS_ORDER.forEach(t => turmaOptions += `<option value="${t}">${t}</option>`);
+                selCont.innerHTML = `
+                    <div class="flex flex-col gap-2">
+                        <label class="text-[10px] font-bold text-gray-400 uppercase">Filtrar Turma:</label>
+                        <select id="rep-turma-filter" class="w-full p-3 border rounded shadow-sm font-bold text-gray-700 bg-white">
+                            ${turmaOptions}
+                        </select>
+                        <button onclick="generateGlobalReport()" class="w-full py-4 bg-indigo-600 text-white rounded font-black uppercase text-xs shadow-md">Gerar Notas Detalhadas</button>
+                    </div>`;
+            }
+        });
     }
 
-    window.deleteEvaluationInList = async (id) => { if (confirm('Excluir permanentemente da nuvem?')) { await deleteFromSupabase(id); await showList(); } }
-    window.exportToCSV = () => { if (!cachedEvaluations.length) return; let csv = 'Data;Turma;Prova;Cenario;Alunos;Avaliadores;Tempo;NotaMin;NotaMax\n'; cachedEvaluations.forEach(e => { const sc = Object.values(e.individualscores || {}).map(s => s.finalScore); const min = sc.length ? Math.min(...sc).toFixed(1) : "0.0"; const max = sc.length ? Math.max(...sc).toFixed(1) : "0.0"; csv += `${new Date(e.updatedat).toLocaleDateString('pt-BR')};${e.turma};${e.type};${getFriendlySubtypeName(e.type, e.subtype)};"${e.studentnames.join(', ')}";"${e.instructornames?.join(', ')}";${e.time};${min};${max}\n`; }); const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `backup_cfsd_2025.csv`; link.click(); }
-    window.triggerPrint = () => window.print();
+    function generateGlobalReport() {
+        const turmaFilter = document.getElementById('rep-turma-filter')?.value || 'TODAS';
+        const sc = {}; 
+        
+        // Agrupar por Turma -> Aluno para garantir a ordem solicitada
+        cachedEvaluations.forEach(ev => {
+            if (turmaFilter !== 'TODAS' && ev.turma !== turmaFilter) return;
+            
+            for (const n in ev.individualscores) {
+                const key = `${ev.turma}_${n}`; // Chave única por Turma e Nome
+                if (!sc[key]) sc[key] = { name: n, turma: ev.turma, total: 0, evs: [] };
+                sc[key].total += ev.individualscores[n].finalScore;
+                sc[key].evs.push(ev);
+            }
+        });
+
+        // Ordenar: Primeiro por Turma (conforme TURMAS_ORDER), depois por Nome
+        const sortedKeys = Object.keys(sc).sort((a, b) => {
+            const idxA = TURMAS_ORDER.indexOf(sc[a].turma);
+            const idxB = TURMAS_ORDER.indexOf(sc[b].turma);
+            if (idxA !== idxB) return idxA - idxB;
+            return sc[a].name.localeCompare(sc[b].name);
+        });
+
+        let h = '<div class="space-y-4">';
+        sortedKeys.forEach(key => {
+            const data = sc[key];
+            const sn = key.replace(/'/g, "\\'");
+            h += `
+                <div class="border rounded bg-white shadow-sm p-4">
+                    <div class="flex justify-between items-center border-b pb-2 mb-2">
+                        <div>
+                            <span class="text-[8px] font-black bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded mr-2 uppercase">TURMA ${data.turma}</span>
+                            <span class="font-bold text-sm uppercase">${data.name}</span>
+                        </div>
+                        <span class="text-2xl font-black text-indigo-600">${data.total.toFixed(1)}</span>
+                    </div>
+                    <div class="space-y-3">`;
+            data.evs.forEach(ev => { 
+                h += `
+                <div class="p-2 bg-gray-50 rounded border">
+                    <p class="text-[10px] font-bold uppercase text-primary">${getCurrentEvaluationConfig(ev.type).short_name} - Nota: ${ev.individualscores[data.name].finalScore.toFixed(1)}</p>
+                    <div class="mt-1">${renderPenaltyItemsList(ev, data.name)}</div>
+                </div>`; 
+            });
+            h += '</div></div>';
+        });
+        document.getElementById('student-report-output').innerHTML = h + '</div>';
+    }
+
+    function generateStudentReport() {
+        const n = document.getElementById('rep-stud').value; if (!n) return;
+        const evs = cachedEvaluations.filter(e => e.studentnames.includes(n));
+        let sum = 0; let h = `<h3 class="font-black text-center border-b pb-3 mb-4 uppercase text-gray-700 tracking-widest text-lg">Histórico: ${n}</h3><div class="space-y-4">`;
+        evs.sort((a, b) => new Date(b.updatedat) - new Date(a.updatedat)).forEach(ev => {
+            const score = ev.individualscores[n].finalScore; sum += score;
+            h += `<div class="p-4 border rounded-xl bg-gray-50 shadow-sm"><div class="flex justify-between mb-2 text-xs uppercase font-black"><span>${getCurrentEvaluationConfig(ev.type).name}</span><span>${ev.turma} | ${new Date(ev.updatedat).toLocaleDateString()}</span></div><div class="grid grid-cols-2 text-xs font-bold"><div><p class="text-[8px] text-gray-400">Tempo</p><p class="text-lg font-mono">${ev.time}</p></div><div class="text-right"><p class="text-[8px] text-gray-400">Nota</p><p class="text-2xl font-black text-primary">${score.toFixed(1)}</p></div></div><div class="mt-2 pt-2 border-t">${renderPenaltyItemsList(ev, n)}</div></div>`;
+        });
+        document.getElementById('student-report-output').innerHTML = `<div class="bg-indigo-600 text-white p-6 rounded-2xl text-center mb-6 shadow-lg"><p class="text-xs uppercase font-bold opacity-80 mb-1">Nota Total Acumulada</p><p class="text-5xl font-black">${sum.toFixed(1)} <span class="text-lg">pts</span></p></div>${h}</div>`;
+    }
+
+    window.generateGlobalReport = generateGlobalReport;
+    window.generateStudentReport = generateStudentReport;
     
-    // Popula tempos e sincroniza ao carregar
+    document.getElementById('evaluation-form').onsubmit = async (e) => {
+        e.preventDefault(); 
+        const res = calculateScores(); 
+        const evalData = { id: document.getElementById('evaluation-id').value || generateId(), type: document.getElementById('evaluation-type').value, turma: document.getElementById('evaluation-turma').value, studentnames: getStudentNamesFromForm(), instructornames: getInstructorNamesFromForm(), time: res.timeStr, penalties: studentPenalties, individualscores: res.scores, updatedat: new Date().toISOString() };
+        if (await saveEvaluation(evalData)) showList();
+    };
+
     window.onload = async () => { 
         populateTimeSelectors(); 
         await syncData(); 
         renderEvaluationsList(); 
         document.getElementById('main-content').style.display = 'block'; 
-    }
+    };
+    window.addEventListener('online', () => { processPendingSync(); });
 </script>
 
 </body>
