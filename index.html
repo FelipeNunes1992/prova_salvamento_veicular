@@ -99,7 +99,7 @@
                 <div id="list-empty" class="text-center py-10 text-gray-400 border-2 border-dashed rounded-xl" style="display:none;">Nenhum registro encontrado.</div>
             </div>
 
-            <!-- Formulário -->
+            <!-- Form View -->
             <div id="form-view" style="display:none;">
                 <h2 id="form-title" class="text-2xl font-black mb-4 text-gray-800 border-b pb-2 uppercase tracking-tighter no-print">Avaliação</h2>
                 <form id="evaluation-form" class="space-y-4">
@@ -154,7 +154,7 @@
                             <div class="flex-1"><label class="text-[10px] text-gray-400 font-bold uppercase">Segs</label><select id="time-seconds" onchange="calculateScores()" class="block w-full rounded-lg border-gray-300 p-3 border font-mono font-bold bg-white"></select></div>
                             <div class="w-1/4"><label class="text-[10px] text-gray-400 font-bold uppercase">ms</label><input type="number" id="time-milliseconds" oninput="calculateScores()" min="0" max="999" value="000" class="block w-full rounded-lg border-gray-300 p-3 border text-center font-mono font-bold bg-white"></div>
                         </div>
-                        <p class="text-xs text-gray-500 mt-2 font-bold italic">Nota Base (Tempo): <span id="base-score" class="text-primary font-black">0.0</span></p>
+                        <p class="text-xs text-gray-500 mt-2 font-bold italic">Nota Base: <span id="base-score" class="text-primary font-black">0.0</span></p>
                     </div>
 
                     <h3 class="text-sm font-black pt-4 text-gray-800 no-print uppercase tracking-widest">Barema Técnico</h3>
@@ -169,7 +169,7 @@
                             <span class="text-xs font-bold text-gray-500 uppercase">Soma de Penalidades:</span>
                             <span id="penalty-count" class="text-2xl font-black text-primary">0</span>
                         </div>
-                        <h3 class="text-xl font-bold mb-3 text-gray-800 text-center uppercase">Resultados das Notas</h3>
+                        <h3 class="text-xl font-bold mb-3 text-gray-800 text-center uppercase">Resultados Finais</h3>
                         <div id="individual-scores-table" class="space-y-2"></div>
                     </div>
 
@@ -204,7 +204,7 @@
                         <div id="dash-prova-stats" class="grid grid-cols-1 sm:grid-cols-3 gap-3"></div>
                     </div>
                     <div class="stat-card border-l-4 border-yellow-500">
-                        <h3 class="text-xs font-black text-gray-400 uppercase mb-4 tracking-widest font-bold">Top 10 Ocorrências</h3>
+                        <h3 class="text-xs font-black text-gray-400 uppercase mb-4 tracking-widest font-bold">Top 10 Penalidades (Ocorrências)</h3>
                         <div id="dash-penalty-stats" class="space-y-2"></div>
                     </div>
                 </div>
@@ -226,16 +226,108 @@
 <script>
     // --- 1. CONSTANTES E CONFIGURAÇÕES ---
     const TURMAS_ORDER = ['ALFA', 'BRAVO', 'CHARLIE', 'DELTA', 'ECHO', 'FOXTROT', 'GOLF', 'HOTEL', 'INDIAN', 'JULIET'];
-    const TIME_SCORES_1_5 = [{max:180,s:1.5},{max:190,s:1.4},{max:200,s:1.3},{max:210,s:1.2},{max:220,s:1.1},{max:230,s:1.0},{max:240,s:0.9},{max:250,s:0.8},{max:260,s:0.7},{max:270,s:0.6},{max:280,s:0.5},{max:290,s:0.4},{max:300,s:0.3},{max:310,s:0.2},{max:320,s:0.1},{max:Infinity,s:0.0}];
-    const TIME_SCORES_3_0 = [{max:300,s:3.0},{max:310,s:2.8},{max:320,s:2.6},{max:330,s:2.4},{max:340,s:2.2},{max:350,s:2.0},{max:360,s:1.8},{max:370,s:1.6},{max:380,s:1.4},{max:390,s:1.2},{max:400,s:1.0},{max:410,s:0.8},{max:420,s:0.6},{max:430,s:0.4},{max:440,s:0.2},{max:Infinity,s:0.0}];
+    
+    // TABELA ESTABILIZAÇÃO (1,5 PTS)
+    const TIME_SCORES_1_5 = [
+        {max: 90.00, s: 1.5}, {max: 99.999, s: 1.4}, {max: 109.999, s: 1.3}, {max: 119.999, s: 1.2}, 
+        {max: 129.999, s: 1.1}, {max: 139.999, s: 1.0}, {max: 149.999, s: 0.9}, {max: 159.999, s: 0.8}, 
+        {max: 169.999, s: 0.7}, {max: 179.999, s: 0.6}, {max: 189.999, s: 0.5}, {max: 199.999, s: 0.4}, 
+        {max: 209.999, s: 0.3}, {max: 219.999, s: 0.2}, {max: 229.999, s: 0.1}, {max: Infinity, s: 0.0}
+    ];
+
+    // TABELA RETIRADA (3,0 PTS) - CORRIGIDA CONFORME PDF
+    const TIME_SCORES_3_0 = [
+        {max: 300.00, s: 3.0},   // Até 5'00"
+        {max: 309.999, s: 2.8},  // 5'00"01 a 5'09"99
+        {max: 319.999, s: 2.6},  // 5'10" a 5'19"99
+        {max: 329.999, s: 2.4},  // 5'20" a 5'29"99
+        {max: 339.999, s: 2.2},  // 5'30" a 5'39"99
+        {max: 349.999, s: 2.0},  // 5'40" a 5'49"99
+        {max: 359.999, s: 1.8},  // 5'50" a 5'59"99
+        {max: 369.999, s: 1.6},  // 6'00" a 6'09"99
+        {max: 379.999, s: 1.4},  // 6'10" a 6'19"99
+        {max: 389.999, s: 1.2},  // 6'20" a 6'29"99
+        {max: 399.999, s: 1.0},  // 6'30" a 6'39"99
+        {max: 409.999, s: 0.8},  // 6'40" a 6'49"99
+        {max: 419.999, s: 0.6},  // 6'50" a 6'59"99
+        {max: 429.999, s: 0.4},  // 7'00" a 7'09"99
+        {max: 439.999, s: 0.2},  // 7'10" a 7'19"99
+        {max: Infinity, s: 0.0}   // Acima de 7'20"
+    ];
+    
     const EVAL_CONFIGS = {
-        'estabilizacao': { name: 'Estabilização Veicular', short_name: 'Estabilização', base_score: 1.5, penalties: ["Utilizar calço não previsto na estabilização","Utilizar conjunto de escoras incorretamente","Colocar-se em situação insegura","Qualaque outro procedimento errado","Calço solto ou mal colocado (0,2/cada)"], penalty_deduction: 0.2, is_timed_score: true, is_estabilizacao: true },
-        'retirada': { name: 'Retirada de Vítimas', short_name: 'Retirada Vítimas', base_score: 3.0, penalties: ["Não realizar estabilização correta","Não realizar avaliação 360","Não realizar abordagem de frente","Não realizar procedimentos internos","Entrar no veículo antes da estabilização","Não imobilizar vítima corretamente","Retirada fora da técnica 30º","Não colocar O2 / Oxímetro / Colar","Não cobrir a vítima","Procedimento divergente ao ensinado"], penalty_deduction: 0.3, is_timed_score: true, is_estabilizacao: false },
-        'corte': { name: 'Técnica de Corte', short_name: 'Técnica Corte', base_score: 2.0, penalties: {
-            'painel': ["01. Abertura da porta (dobradiças)","02. Abertura da porta (fechadura)","03. Corte da coluna A (mediana)","04. Corte de alívio na base coluna A","05. Posicionar apoio extensor","Procedimento incorreto ou não previsto"],
-            'teto': ["01. Corte Coluna A superior","02. Corte Coluna B superior","03. Corte coluna C/D superior","04. Corte vidro dianteiro","05. 2 Cortes alívio teto","Item de barema não previsto"]
-        }, penalty_deduction: 0.1, is_timed_score: false, is_estabilizacao: false, is_corte: true }
+        'estabilizacao': { 
+            name: 'Estabilização Veicular', 
+            short_name: 'Estabilização', 
+            base_score: 1.5, 
+            penalty_deduction: 0.2, 
+            is_timed_score: true, 
+            is_estabilizacao: true,
+            penalties: [
+                "Utilizar calço não previsto para a finalidade e em local não previsto na estabilização",
+                "Utilizar o conjunto de escoras de maneira incorreta segundo o manual do fabricante ou ensinado nas aulas",
+                "Colocar-se em situação insegura durante a realização da estabilização veicular",
+                "Utilizar o conjunto de V-Strut de maneira incorreta segundo o manual do fabricante ou ensinado nas aulas",
+                "Não travar a catraca do V-Strut",
+                "Qualquer outro procedimento errado",
+                "O calço ficar solto ou mal colocado (retirar 0,2 para cada calço)"
+            ]
+        },
+        'retirada': { 
+            name: 'Retirada de Vítimas', 
+            short_name: 'Retirada Vítimas', 
+            base_score: 3.0, 
+            penalty_deduction: 0.3, 
+            is_timed_score: true, 
+            is_estabilizacao: false,
+            penalties: [
+                "Não realizar corretamente a estabilização veicular",
+                "Não realizar a avaliação 360 graus no veículo (andando)",
+                "Não realizar abordagem de frente para a vítima",
+                "Não realizar os procedimentos internos (desligar o veículo, acionar o freio estacionário)",
+                "Entrar no veículo antes da estabilização",
+                "Não imobilizar a vítima de maneira correta (deixar a cervical solta, movimentos inadequados, etc.)",
+                "Realizar a retirada da vítima com técnica diversa a de 30 graus",
+                "Não colocar o O2 (oxigênio)",
+                "Não colocar o oxímetro",
+                "Não colocar o colar cervical",
+                "Não cobrir a vítima",
+                "Não cobrir a vítima antes de abrir o desencarcerador (simulação)",
+                "Não tirar a luva de vaqueta ao tocar na vítima",
+                "Procedimento inseguro para a vítima ou membros da equipe",
+                "Retirada descoordenada ou movimentação desnecessária da vítima",
+                "Qualquer outro procedimento divergente ao ensinado nas aulas ou errado"
+            ]
+        },
+        'corte': { 
+            name: 'Técnica de Corte', 
+            short_name: 'Técnica Corte', 
+            base_score: 2.0, 
+            penalty_deduction: 0.1, 
+            is_timed_score: false, 
+            is_estabilizacao: false, 
+            is_corte: true,
+            penalties: {
+                'painel': [
+                    "01. Abertura da porta (dobradiças) - usar alargador",
+                    "02. Abertura da porta (fechadura) - usar alargador",
+                    "03. Corte da coluna A na parte mediana - usar cortador",
+                    "04. Corte de alívio na base da coluna A - usar cortador",
+                    "05. Posicionar o apoio do extensor e abrir até atingir a coluna A alta",
+                    "Qualquer procedimento incorreto ou não previsto no rebatimento de painel"
+                ],
+                'teto': [
+                    "01. Corte da Coluna A superior - usar cortador",
+                    "02. Corte da Coluna B superior - usar cortador",
+                    "03. Corte da coluna C e D superior - usar cortador",
+                    "04. Corte do vidro dianteiro - usar machadinha e/ou serra sabre",
+                    "05. 02 Cortes de alívio no teto perto da Coluna A e D - usar cortador",
+                    "Qualquer procedimento incorreto ou não previsto no rebatimento de teto"
+                ]
+            }
+        }
     };
+
     const LOCAL_ALUNOS_KEY = 'offline_bombeiros_alunos';
     const PENDING_SYNC_KEY = 'pending_sync_avaliacoes';
     const supabaseClient = supabase.createClient('https://mnpnwmprnantdyqdtfef.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ucG53bXBybmFudGR5cWR0ZmVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYwMDcyOTcsImV4cCI6MjA4MTU4MzI5N30.f0Hg4ovkXmNUoqbC9nrFwhurPjJ9pnwJYYTtH20g-NM');
@@ -246,14 +338,12 @@
     let studentPenalties = {};
     let allStudentsInAllEvaluations = [];
 
-    // --- 3. DECLARAÇÃO DE FUNÇÕES (HOISTED) ---
+    // --- 3. FUNÇÕES (HOISTING NOMINAL) ---
 
     function generateId() { return Date.now().toString(36) + Math.random().toString(36).substring(2, 9); }
     function timeObjectToString(obj) { return `${String(obj.minutes || 0).padStart(2, '0')}:${String(obj.seconds || 0).padStart(2, '0')}.${String(obj.milliseconds || 0).padStart(3, '0')}`; }
     function getCurrentEvaluationConfig(type) { return EVAL_CONFIGS[type] || EVAL_CONFIGS['estabilizacao']; }
-    function getStudentNamesFromForm() { return Array.from(document.querySelectorAll('.student-name-input')).map(i => i.value.trim()).filter(v => v); }
-    function getInstructorNamesFromForm() { return Array.from(document.querySelectorAll('.instructor-name-input')).map(i => i.value.trim()).filter(v => v); }
-
+    
     function getFriendlySubtypeName(type, subtype) {
         if (!subtype) return '';
         if (type === 'estabilizacao') return subtype === '4rodas' ? '4 Rodas' : 'Tombado';
@@ -276,6 +366,9 @@
         return actualKey ? obj[actualKey] : null;
     }
 
+    function getStudentNamesFromForm() { return Array.from(document.querySelectorAll('.student-name-input')).map(i => i.value.trim()).filter(v => v); }
+    function getInstructorNamesFromForm() { return Array.from(document.querySelectorAll('.instructor-name-input')).map(i => i.value.trim()).filter(v => v); }
+
     function populateTimeSelectors() {
         const mins = document.getElementById('time-minutes');
         const secs = document.getElementById('time-seconds');
@@ -291,6 +384,17 @@
         }
     }
 
+    function getTimeBaseScore(seconds) {
+        const typeEl = document.getElementById('evaluation-type');
+        if (!typeEl) return 0;
+        const type = typeEl.value;
+        const config = getCurrentEvaluationConfig(type);
+        if (!config.is_timed_score) return config.base_score;
+        const list = (type === 'estabilizacao') ? TIME_SCORES_1_5 : TIME_SCORES_3_0;
+        const scoreItem = list.find(t => seconds <= t.max);
+        return scoreItem ? scoreItem.s : 0.0;
+    }
+
     function updatePrintData() {
         const container = document.getElementById('print-data-container'); if (!container) return;
         const studs = getStudentNamesFromForm(); 
@@ -300,17 +404,7 @@
         const mins = document.getElementById('time-minutes')?.value || 0;
         const secs = document.getElementById('time-seconds')?.value || 0;
         const ms = document.getElementById('time-milliseconds')?.value || 0;
-        container.innerHTML = `<h3 class="text-lg font-bold border-b-2 border-primary pb-1 mb-2 uppercase text-primary italic">Avaliação CFSd 2025</h3><div class="grid grid-cols-2 text-[10px] italic font-medium"><p>Prova: ${config.name}</p><p>Turma: ${turma}</p><p>Tempo: ${config.is_timed_score ? timeObjectToString({minutes: mins, seconds: secs, milliseconds: ms}) : 'N/A'}</p><p class="col-span-2">Militares: ${studs.join(', ')}</p></div>`;
-    }
-
-    function getTimeBaseScore(seconds) {
-        const typeEl = document.getElementById('evaluation-type');
-        if (!typeEl) return 0;
-        const config = getCurrentEvaluationConfig(typeEl.value);
-        if (!config.is_timed_score) return config.base_score;
-        const list = (typeEl.value === 'estabilizacao') ? TIME_SCORES_1_5 : TIME_SCORES_3_0;
-        const scoreItem = list.find(t => seconds <= t.max);
-        return scoreItem ? scoreItem.s : 0.0;
+        container.innerHTML = `<h3 class="text-lg font-bold border-b-2 border-primary pb-1 mb-2 uppercase text-primary italic">Avaliação CFSd 2025</h3><div class="grid grid-cols-2 text-[10px] italic font-medium"><p>Prova: ${config.name}</p><p>Turma: ${turma}</p><p>Tempo: ${config.is_timed_score ? timeObjectToString({minutes: mins, seconds: secs, milliseconds: ms}) : 'N/A'}</p><p class="col-span-2 border-t mt-1 pt-1 font-bold italic">Militares: ${studs.join(', ')}</p></div>`;
     }
 
     function calculateScores() {
@@ -320,11 +414,14 @@
         const secs = parseInt(document.getElementById('time-seconds')?.value || 0);
         const ms = parseInt(document.getElementById('time-milliseconds')?.value || 0);
         const totalSecs = (mins * 60) + secs + (ms / 1000);
+        
         let bs = config.is_timed_score ? getTimeBaseScore(totalSecs) : config.base_score;
         const baseEl = document.getElementById('base-score'); if(baseEl) baseEl.textContent = bs.toFixed(1);
+
         const studs = getStudentNamesFromForm(); const table = document.getElementById('individual-scores-table'); if(table) table.innerHTML = ''; const sc = {};
         let totalP = 0; for (const r in studentPenalties) { for (const p in studentPenalties[r]) totalP += studentPenalties[r][p]; }
         const pCnt = document.getElementById('penalty-count'); if(pCnt) pCnt.textContent = totalP;
+        
         const gDed = Object.values(studentPenalties["Grupo"] || {}).reduce((a,b) => a+b, 0);
         studs.forEach(s => {
             let pCount = gDed + Object.values(studentPenalties[s] || {}).reduce((a,b) => a+b, 0);
@@ -344,30 +441,17 @@
             for (const pId in pens["Grupo"]) { 
                 const idx = parseInt(pId.split('-')[1]);
                 const text = Array.isArray(src) ? src[idx] : src[idx];
-                h += `<li class="text-[10px] leading-tight"><span class="font-black text-primary text-[8px] uppercase">[Equipe]</span> ${text || 'Item Barema'} (x${pens["Grupo"][pId]})</li>`; content = true; 
+                h += `<li class="text-[10px] leading-tight"><span class="font-black text-primary text-[8px] uppercase">[Equipe]</span> ${text || 'Item'} (x${pens["Grupo"][pId]})</li>`; content = true; 
             } 
         }
         if (militar && pens[militar]) { 
             for (const pId in pens[militar]) { 
                 const idx = parseInt(pId.split('-')[1]);
                 const text = Array.isArray(src) ? src[idx] : src[idx];
-                h += `<li class="text-[10px] leading-tight"><span class="font-black text-indigo-600 text-[8px] uppercase">[Individ.]</span> ${text || 'Item Barema'} (x${pens[militar][pId]})</li>`; content = true; 
+                h += `<li class="text-[10px] leading-tight"><span class="font-black text-indigo-600 text-[8px] uppercase">[Indiv.]</span> ${text || 'Item'} (x${pens[militar][pId]})</li>`; content = true; 
             } 
         }
         return content ? h + '</ul>' : '<p class="text-[9px] text-green-600 italic font-bold">Limpo.</p>';
-    }
-
-    async function deleteFromSupabase(id) {
-        const overlay = document.getElementById('loading-db');
-        if (overlay) overlay.style.display = 'flex';
-        try {
-            const { error } = await supabaseClient.from('avaliacoes').delete().eq('id', id);
-            if (error) throw error;
-        } catch (err) {
-            console.error("Erro ao excluir:", err.message);
-        } finally {
-            if (overlay) overlay.style.display = 'none';
-        }
     }
 
     function applyPenalty(pId) {
@@ -401,7 +485,7 @@
                 if (studentPenalties[name][pId] > 0) {
                     const idx = parseInt(pId.split('-')[1]);
                     const text = Array.isArray(src) ? src[idx] : 'Item';
-                    h += `<li class="flex justify-between text-[10px] items-center leading-tight">${text} <span class="font-black ml-2 text-gray-400">x${studentPenalties[name][pId]}</span> <button type="button" onclick="removePenalty('${name}', '${pId}')" class="bg-red-500 text-white px-2 ml-2 rounded no-print font-black shadow-sm">X</button></li>`;
+                    h += `<li class="flex justify-between text-[10px] items-center leading-tight">${text} <span class="font-black ml-2 text-gray-400">x${studentPenalties[name][pId]}</span> <button type="button" onclick="removePenalty('${name}', '${pId}')" class="bg-red-50 text-white px-2 ml-2 rounded no-print">X</button></li>`;
                     has = true;
                 }
             });
@@ -477,6 +561,19 @@
         }
     }
 
+    async function deleteFromSupabase(id) {
+        const overlay = document.getElementById('loading-db');
+        if (overlay) overlay.style.display = 'flex';
+        try {
+            const { error } = await supabaseClient.from('avaliacoes').delete().eq('id', id);
+            if (error) throw error;
+        } catch (err) {
+            console.error("Erro ao excluir:", err.message);
+        } finally {
+            if (overlay) overlay.style.display = 'none';
+        }
+    }
+
     function calculateDashboardMetrics() {
         const turmas = {}; const milSet = new Set(); const provas = {}; const penaltiesAgg = {};
         let passCount = 0; let totalPossibleItems = 0;
@@ -526,31 +623,6 @@
         const elP = document.getElementById('dash-pass-rate'); if(elP) elP.textContent = totalPossibleItems > 0 ? Math.round((passCount / totalPossibleItems) * 100) + '%' : '0%';
     }
 
-    // --- 4. MAPEAMENTO WINDOW FINAL ---
-    window.applyPenalty = applyPenalty;
-    window.removePenalty = removePenalty;
-    window.renderPenaltiesRegistration = renderPenaltiesRegistration;
-    window.calculateScores = calculateScores;
-    window.addStudentInput = addStudentInput;
-    window.addInstructorInput = addInstructorInput;
-    window.updatePrintData = updatePrintData;
-    window.handleTurmaChange = handleTurmaChange;
-    window.getFriendlySubtypeName = getFriendlySubtypeName;
-    window.getTimeBaseScore = getTimeBaseScore;
-    window.getCurrentEvaluationConfig = getCurrentEvaluationConfig;
-    window.renderPenaltyItemsList = renderPenaltyItemsList;
-    window.populateTimeSelectors = populateTimeSelectors;
-
-    window.deleteEvaluationInList = function(id) {
-        if (confirm('Deseja excluir esta avaliação permanentemente?')) {
-            deleteFromSupabase(id).then(() => {
-                syncData().then(() => renderEvaluationsList());
-            });
-        }
-    };
-
-    // --- 5. NAVEGAÇÃO E DB ENGINE ---
-
     async function syncData() {
         const overlay = document.getElementById('loading-db'); if (navigator.onLine) overlay.style.display = 'flex';
         try {
@@ -575,7 +647,7 @@
         const pending = JSON.parse(localStorage.getItem(PENDING_SYNC_KEY) || "[]"); if (pending.length === 0) return;
         const remaining = [];
         for (const item of pending) { try { await supabaseClient.from('avaliacoes').upsert(item); } catch (e) { remaining.push(item); } }
-        localStorage.setItem(PENDING_SYNC_KEY, JSON.stringify(remaining)); updateSyncStatus(); if (remaining.length === 0) syncData();
+        localStorage.setItem(PENDING_SYNC_KEY, JSON.stringify(remaining)); if (remaining.length === 0) syncData();
     }
 
     async function saveEvaluation(evalData) {
@@ -589,6 +661,29 @@
         localStorage.setItem(PENDING_SYNC_KEY, JSON.stringify(pending)); return true;
     }
 
+    // --- 4. MAPEAMENTO WINDOW FINAL ---
+    window.applyPenalty = applyPenalty;
+    window.removePenalty = removePenalty;
+    window.renderPenaltiesRegistration = renderPenaltiesRegistration;
+    window.calculateScores = calculateScores;
+    window.addStudentInput = addStudentInput;
+    window.addInstructorInput = addInstructorInput;
+    window.updatePrintData = updatePrintData;
+    window.handleTurmaChange = handleTurmaChange;
+    window.getFriendlySubtypeName = getFriendlySubtypeName;
+    window.getTimeBaseScore = getTimeBaseScore;
+    window.getCurrentEvaluationConfig = getCurrentEvaluationConfig;
+    window.renderPenaltyItemsList = renderPenaltyItemsList;
+    window.populateTimeSelectors = populateTimeSelectors;
+
+    window.deleteEvaluationInList = function(id) {
+        if (confirm('Deseja excluir esta avaliação permanentemente?')) {
+            deleteFromSupabase(id).then(() => {
+                syncData().then(() => renderEvaluationsList());
+            });
+        }
+    };
+
     window.showList = function() { syncData().then(() => { document.getElementById('form-view').style.display = 'none'; document.getElementById('report-view').style.display = 'none'; document.getElementById('dashboard-view').style.display = 'none'; document.getElementById('list-view').style.display = 'block'; renderEvaluationsList(); }); }
     window.showDashboardView = function() { syncData().then(() => { document.getElementById('list-view').style.display = 'none'; document.getElementById('dashboard-view').style.display = 'block'; calculateDashboardMetrics(); }); }
 
@@ -601,6 +696,10 @@
         document.getElementById('evaluation-id').value = ev?.id || '';
         document.getElementById('estabilizacao-subtype-container').style.display = config.is_estabilizacao ? 'block' : 'none';
         document.getElementById('corte-subtype-container').style.display = config.is_corte ? 'block' : 'none';
+        
+        // NOVIDADE: Oculta o seletor de tempo para provas sem nota por tempo (como Corte)
+        document.getElementById('time-selector-container').style.display = config.is_timed_score ? 'block' : 'none';
+        
         document.getElementById('evaluation-turma').value = ev?.turma || '';
         studentPenalties = ev?.penalties || {}; 
         document.getElementById('students-container').innerHTML = '';
@@ -669,31 +768,24 @@
     function generateGlobalReport() {
         const turmaFilter = document.getElementById('rep-turma-filter')?.value || 'TODAS';
         const sc = {}; 
-        
-        // Agrupar por Turma -> Aluno para garantir a ordem solicitada
         cachedEvaluations.forEach(ev => {
             if (turmaFilter !== 'TODAS' && ev.turma !== turmaFilter) return;
-            
             for (const n in ev.individualscores) {
-                const key = `${ev.turma}_${n}`; // Chave única por Turma e Nome
+                const key = `${ev.turma}_${n}`; 
                 if (!sc[key]) sc[key] = { name: n, turma: ev.turma, total: 0, evs: [] };
                 sc[key].total += ev.individualscores[n].finalScore;
                 sc[key].evs.push(ev);
             }
         });
-
-        // Ordenar: Primeiro por Turma (conforme TURMAS_ORDER), depois por Nome
         const sortedKeys = Object.keys(sc).sort((a, b) => {
             const idxA = TURMAS_ORDER.indexOf(sc[a].turma);
             const idxB = TURMAS_ORDER.indexOf(sc[b].turma);
             if (idxA !== idxB) return idxA - idxB;
             return sc[a].name.localeCompare(sc[b].name);
         });
-
         let h = '<div class="space-y-4">';
         sortedKeys.forEach(key => {
             const data = sc[key];
-            const sn = key.replace(/'/g, "\\'");
             h += `
                 <div class="border rounded bg-white shadow-sm p-4">
                     <div class="flex justify-between items-center border-b pb-2 mb-2">
@@ -733,7 +825,11 @@
     document.getElementById('evaluation-form').onsubmit = async (e) => {
         e.preventDefault(); 
         const res = calculateScores(); 
-        const evalData = { id: document.getElementById('evaluation-id').value || generateId(), type: document.getElementById('evaluation-type').value, turma: document.getElementById('evaluation-turma').value, studentnames: getStudentNamesFromForm(), instructornames: getInstructorNamesFromForm(), time: res.timeStr, penalties: studentPenalties, individualscores: res.scores, updatedat: new Date().toISOString() };
+        const type = document.getElementById('evaluation-type').value; 
+        const config = getCurrentEvaluationConfig(type);
+        let sub = undefined; if (config.is_corte) sub = document.getElementById('corte-subtype-select').value; if (config.is_estabilizacao) sub = document.getElementById('estabilizacao-subtype-select').value;
+        const cleanedPenalties = {}; for (const resp in studentPenalties) { if (Object.keys(studentPenalties[resp]).length > 0) cleanedPenalties[resp] = studentPenalties[resp]; }
+        const evalData = { id: document.getElementById('evaluation-id').value || generateId(), type, subtype: sub, turma: document.getElementById('evaluation-turma').value, studentnames: getStudentNamesFromForm(), instructornames: getInstructorNamesFromForm(), time: config.is_timed_score ? res.timeStr : "N/A", penalties: cleanedPenalties, individualscores: res.scores, updatedat: new Date().toISOString() };
         if (await saveEvaluation(evalData)) showList();
     };
 
