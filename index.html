@@ -799,7 +799,11 @@
             data.evs.forEach(ev => { 
                 h += `
                 <div class="p-2 bg-gray-50 rounded border">
-                    <p class="text-[10px] font-bold uppercase text-primary">${getCurrentEvaluationConfig(ev.type).short_name} - Nota: ${ev.individualscores[data.name].finalScore.toFixed(1)}</p>
+                    <p class="text-[10px] font-bold uppercase text-primary">
+                        ${getCurrentEvaluationConfig(ev.type).short_name} 
+                        ${ev.subtype ? `(${getFriendlySubtypeName(ev.type, ev.subtype)})` : ''} 
+                        - Nota: ${ev.individualscores[data.name].finalScore.toFixed(1)}
+                    </p>
                     <div class="mt-1">${renderPenaltyItemsList(ev, data.name)}</div>
                 </div>`; 
             });
